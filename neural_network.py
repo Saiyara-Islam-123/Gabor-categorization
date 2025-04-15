@@ -63,7 +63,9 @@ class LastLayer(nn.Module):
         self.autoencoder_output = None
         self.autoencoder = autoencoder.encoder
 
-        self.supervised_part = nn.Sequential(nn.Linear(128, 2))
+        self.supervised_part = nn.Sequential(nn.Linear(128, 50),
+
+                                             )
 
 
     def forward(self, x):

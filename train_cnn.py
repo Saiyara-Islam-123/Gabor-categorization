@@ -1,3 +1,4 @@
+import neural_network
 from neural_network import *
 from torch import optim
 from dataset import *
@@ -12,7 +13,7 @@ def unsup_training():
     unsup_model = AutoEncoder()
     loss_fn_unsup = nn.MSELoss()
 
-    optimizer = optim.Adam(unsup_model.parameters(), lr=0.01, weight_decay=0.001)
+    optimizer = optim.Adam(unsup_model.parameters(), lr=0.01, weight_decay=0.01)
     unsup_model.train()
 
     print("\nUnsupervised part!")
@@ -27,7 +28,7 @@ def unsup_training():
             loss.backward()
             optimizer.step()
 
-            print(f"Loss: {loss.item()}")
+        print(f"Loss: {loss.item()}")
     return unsup_model
 
 
@@ -37,19 +38,20 @@ def sup_training(model):
     sup_model.train()
 
     loss_fn_sup = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.01)
 
     print("\nSupervised part!")
     for epoch in range(1):
         for i in range(len(batches)):
             optimizer.zero_grad()
             outputs = (sup_model(batches[i].reshape(1, 1, 513, 513)))
-            print(outputs, batches_of_labels[i])
+
             loss = loss_fn_sup(outputs, batches_of_labels[i])
+            print(outputs, batches_of_labels[i], loss.item(), i, epoch)
             loss.backward()
             optimizer.step()
 
-            print(f"Epoch {epoch}, Loss: {loss.item()}")
+        print(f"Epoch {epoch}, Loss: {loss.item()}")
 
     return sup_model
 
@@ -63,6 +65,11 @@ def acc(model):
     return acc
 
 if __name__ == "__main__":
-    unsup_model = unsup_training()
+    #unsup_model = unsup_training()
+    #torch.save(unsup_model.state_dict(), "unsup_model.pth")
+
+    unsup_model = neural_network.AutoEncoder()
+    unsup_model.load_state_dict(torch.load("unsup_model.pth", weights_only=True), strict=False)
+
     sup_model = sup_training(unsup_model)
     acc(sup_model)
