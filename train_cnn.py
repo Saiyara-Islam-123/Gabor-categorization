@@ -2,7 +2,7 @@ import neural_network
 from neural_network import *
 from torch import optim
 from dataset import *
-from torcheval.metrics import BinaryAccuracy
+
 
 X_train, y_train, X_test, y_test = test_train_split()
 batches = list(torch.split(X_train, 1))
@@ -32,13 +32,13 @@ def unsup_training():
     return unsup_model
 
 
-def sup_training(model):
-    sup_model = LastLayer(model)
+def sup_training(unsup_model):
+    sup_model = LastLayer(unsup_model)
 
     sup_model.train()
 
     loss_fn_sup = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.01)
+    optimizer = optim.Adam(sup_model.parameters(), lr=0.001, weight_decay=0.0001)
 
     print("\nSupervised part!")
     for epoch in range(1):
@@ -51,14 +51,15 @@ def sup_training(model):
             loss.backward()
             optimizer.step()
 
-        print(f"Epoch {epoch}, Loss: {loss.item()}")
-
     return sup_model
 
 def acc(model):
     pred_labels = model(X_test.reshape(80, 1, 513, 513)).argmax(dim=1)
 
+
     acc = (pred_labels == y_test).float().mean().item()
+    print(pred_labels)
+    print(y_test)
 
     print("\nAccuracy = ")
     print(acc * 100)
@@ -69,7 +70,7 @@ if __name__ == "__main__":
     #torch.save(unsup_model.state_dict(), "unsup_model.pth")
 
     unsup_model = neural_network.AutoEncoder()
-    unsup_model.load_state_dict(torch.load("unsup_model.pth", weights_only=True), strict=False)
+    unsup_model.load_state_dict(torch.load("unsup_model.pth", weights_only=True), strict=True)
 
     sup_model = sup_training(unsup_model)
     acc(sup_model)
