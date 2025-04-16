@@ -66,8 +66,8 @@ def acc(model):
     return acc
 
 if __name__ == "__main__":
-    #unsup_model = unsup_training()
-    #torch.save(unsup_model.state_dict(), "unsup_model.pth")
+    unsup_model = unsup_training()
+    torch.save(unsup_model.state_dict(), "unsup_model.pth")
 
     unsup_model = neural_network.AutoEncoder()
     unsup_model.load_state_dict(torch.load("unsup_model.pth", weights_only=True), strict=True)
