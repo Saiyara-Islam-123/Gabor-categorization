@@ -103,8 +103,8 @@ def train_supervised(model, trainloader, device, epochs=15):
         print("sup_net model weights saved as sup_net_weights.pth'")
 
     # Keep the plots open after training
-    plt.ioff()
-    plt.close(fig)
+    #plt.ioff()
+    #plt.close(fig)
     # Save the loss values as a NumPy array
     loss_file_path = os.path.join(results_dir, "sup_epoch_losses.npy")
     np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
