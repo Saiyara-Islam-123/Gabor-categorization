@@ -130,6 +130,7 @@ if __name__ == "__main__":
     excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation.xlsx")
     trainloader, _, _ = load_gabor_data(excel_file, batch_size=64)
 
+
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
