@@ -17,7 +17,6 @@ def load_latest_weights(model, weights_dir):
         f for f in os.listdir(weights_dir)
         if f.startswith("unsup_net_weights_") and f.endswith(".pth")
     ]
-
     if not weight_files:
         raise FileNotFoundError(f"No weights found in directory '{weights_dir}'.")
 
