@@ -11,7 +11,7 @@ def get_dataset():
 
     labels = []
 
-    df = pd.read_excel("GABORS/gabors_1/categorisation.xlsx")
+    df = pd.read_excel("experimentFiles/categorisation.xlsx")
 
     for i in range(len(df["category"])):
         label = df["category"].iloc[i]
