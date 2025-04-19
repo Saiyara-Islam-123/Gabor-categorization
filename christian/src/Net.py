@@ -38,9 +38,28 @@ class Net(nn.Module):
         )
 
     def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
+        encoder_outputs = []
+
+        # Encoder forward pass
+        for layer in self.encoder:
+            x = layer(x)
+            encoder_outputs.append(x)
+
+        # Reverse the encoder outputs for skip connections
+        encoder_outputs = encoder_outputs[::-1]
+
+        # Decoder forward pass with skip connections
+        for i, layer in enumerate(self.decoder):
+            if isinstance(layer, nn.ConvTranspose2d) and i < len(encoder_outputs):
+                x = x + 0.05 * encoder_outputs[i]
+            x = layer(x)
+
         return x
+
+    #def forward(self, x):
+    #    x = self.encoder(x)
+    #    x = self.decoder(x)
+    #    return x
 
 
 

@@ -30,7 +30,7 @@ def load_latest_weights(model, weights_dir):
     print(f"Loaded weights from: {latest_weights_path}")
 
 
-def test_reconstruction(model, testloader, device):
+def reconstruction(model, testloader, device):
     """
     Test the model's reconstruction ability on the first batch of test images.
     Displays the first 4 input samples and their corresponding reconstructions.
@@ -96,4 +96,4 @@ if __name__ == "__main__":
     load_latest_weights(unsup_net, weights_dir)
 
     # Test reconstruction with the model
-    test_reconstruction(unsup_net, testloader, device)
+    reconstruction(unsup_net, testloader, device)
