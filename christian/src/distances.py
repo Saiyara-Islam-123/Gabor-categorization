@@ -18,7 +18,23 @@ def cosine_distance_matrix(embeddings):
 
 def process_activations(activations, labels):
     """
-    Compute within-category and between-category pairwise average cosine distances.
+    Processes activations and labels to calculate the mean within-category and between-category
+    distances.
+
+    The function computes cosine distances within each category and average distances
+    between different categories provided by the activations and associated labels.
+    Both distance metrics are useful in analyzing clustering based on categories.
+
+    :param activations: torch.Tensor
+        A tensor containing activation outputs to perform the clustering analysis on.
+
+    :param labels: torch.Tensor
+        A tensor representing labels corresponding to each activation in the input tensor.
+
+    :return: Tuple[float, float]
+        A tuple containing:
+        - The mean of within-category distances.
+        - The mean of between-category distances.
     """
     activations = activations.cpu().detach().numpy()
     labels = labels.cpu().detach().numpy()
@@ -48,8 +64,25 @@ def process_activations(activations, labels):
 
 def evaluate_and_save_epochs(model, trainloader, device, weight_dir, num_epochs, save_prefix):
     """
-    Evaluate the model at each epoch, compute within/between category distances,
-    and save them with a proper name.
+    Evaluates a model across multiple epochs using provided training data, calculates
+    within-category and between-category average distances of activations, and saves
+    the results for each epoch as numpy files.
+
+    :param model: The deep learning model to evaluate.
+    :type model: torch.nn.Module
+    :param trainloader: DataLoader providing training data.
+    :type trainloader: torch.utils.data.DataLoader
+    :param device: The device to run the model on (e.g., 'cuda' or 'cpu').
+    :type device: torch.device
+    :param weight_dir: Directory path where the model's weights for different epochs
+        are stored.
+    :type weight_dir: str
+    :param num_epochs: The number of epochs to evaluate the model for.
+    :type num_epochs: int
+    :param save_prefix: Prefix for the filenames of the saved output within and
+        between distances.
+    :type save_prefix: str
+    :return: None
     """
     # Results directory
     results_dir = "../epochs_results"

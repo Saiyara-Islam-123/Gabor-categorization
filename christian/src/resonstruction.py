@@ -40,6 +40,14 @@ def reconstruction(model, testloader, device):
         # Get the first batch of test images
         for images, _ in testloader:
             images = images.to(device)
+
+           # Add single horizontal stripe across the middle
+           #  stripe_width = 2
+           #  middle = images.shape[2] // 2
+           #  stripe_start = middle - stripe_width // 2
+           #  stripe_end = middle + stripe_width // 2
+           #  images[:, :, stripe_start:stripe_end, :] = 1
+
             outputs = model(images)  # Reconstructed images
 
             # Display the first 4 images and their reconstructions
@@ -70,7 +78,6 @@ def reconstruction(model, testloader, device):
 
             plt.show()
             break  # Process only the first batch
-
 
 if __name__ == "__main__":
     # Define paths and directories

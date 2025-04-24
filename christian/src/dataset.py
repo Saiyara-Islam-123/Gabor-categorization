@@ -11,9 +11,16 @@ import os
 class GaborDataset(Dataset):
     def __init__(self, excel_file, transform=None):
         """
-        Args:
-            excel_file (str): Path to the Excel file containing image paths and labels.
-            transform (callable, optional): A function/transform to apply to the images.
+        Initializes an instance of a class that processes data from an Excel file
+        and optionally applies a transformation function.
+
+        :param excel_file: Path to the Excel file that needs to be read. The file
+            should be in a format supported by pandas.read_excel.
+        :type excel_file: str
+        :param transform: Optional callable function to apply custom transformations
+            on the data after reading it from the file.
+            Defaults to None if no transformation is provided.
+        :type transform: Callable, optional
         """
         self.data = pd.read_excel(excel_file)  # Read the Excel file
         self.transform = transform

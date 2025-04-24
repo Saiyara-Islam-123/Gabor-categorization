@@ -9,6 +9,25 @@ import os
 import numpy as np
 
 def train_supervised(model, trainloader, device, epochs=15):
+    """
+    Trains a given model using supervised learning with a provided dataloader, device,
+    and a specified number of epochs. The function uses the CrossEntropyLoss for
+    classification tasks, and the Adam optimizer for parameter updates. During training,
+    it visualizes the loss and accuracy over epochs using real-time plots and saves the
+    model's weights after each epoch. Additionally, the computed loss and accuracy values
+    are saved for post-training analysis.
+
+    :param model: Neural network model to be trained
+    :type model: torch.nn.Module
+    :param trainloader: DataLoader providing batches of training data
+    :type trainloader: torch.utils.data.DataLoader
+    :param device: Device on which the model and data will be loaded (e.g., 'cpu' or 'cuda')
+    :type device: torch.device
+    :param epochs: Number of training epochs; defaults to 15
+    :type epochs: int, optional
+    :return: None
+    :rtype: None
+    """
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer

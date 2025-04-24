@@ -9,6 +9,23 @@ import os
 import numpy as np
 
 def train_unsupervised(model, trainloader, device, epochs=5):
+    """
+    Trains an unsupervised model (e.g., autoencoder) using a specified dataset and parameters.
+    This function uses Mean Squared Error (MSE) loss for reconstruction and updates the model's
+    parameters using the Adam optimizer. The training progress, including the real-time loss plot,
+    is updated during each epoch. Additionally, the model's weights and epoch loss values are
+    periodically saved to specified directories.
+
+    :param model: The PyTorch model to be trained.
+    :type model: torch.nn.Module
+    :param trainloader: DataLoader providing the training data, which should return batches of images.
+    :type trainloader: torch.utils.data.DataLoader
+    :param device: The device on which computations will be performed (e.g., 'cuda' or 'cpu').
+    :type device: str
+    :param epochs: The number of training epochs. Default is 5.
+    :type epochs: int, optional
+    :return: None
+    """
     # Define the loss function specific for autoencoder
     criterion = nn.MSELoss()  # Mean Squared Error loss for reconstruction
     # Define optimizer

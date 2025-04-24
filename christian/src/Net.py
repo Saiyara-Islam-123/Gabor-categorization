@@ -38,6 +38,19 @@ class Net(nn.Module):
         )
 
     def forward(self, x):
+        """
+        Performs a forward pass on the neural network composed of an encoder and a
+        decoder, which utilizes skip connections for information flow. The method
+        iteratively processes the input tensor `x` through the encoder layers, stores
+        intermediate results for skip connections, and then passes the processed
+        tensor through the decoder layers, applying skip connections where applicable.
+
+        :param x: The input tensor to the model.
+        :type x: torch.Tensor
+        :return: The output tensor after processing through the encoder-decoder
+                 architecture with skip connections.
+        :rtype: torch.Tensor
+        """
         encoder_outputs = []
 
         # Encoder forward pass
@@ -51,7 +64,7 @@ class Net(nn.Module):
         # Decoder forward pass with skip connections
         for i, layer in enumerate(self.decoder):
             if isinstance(layer, nn.ConvTranspose2d) and i < len(encoder_outputs):
-                x = x + 0.05 * encoder_outputs[i]
+                x = x + 0.5 * encoder_outputs[i]
             x = layer(x)
 
         return x
@@ -65,6 +78,23 @@ class Net(nn.Module):
 
 class SupervisedNet(nn.Module):
     def __init__(self, autoencoder):
+        """
+        SupervisedNet is a neural network model designed for classification tasks. It utilizes
+        a pre-trained autoencoder's encoder as its feature extractor, followed by a classifier
+        module to perform the prediction. The classifier is expected to output two-dimensional
+        predictions corresponding to the target classes. This class assumes that the passed
+        autoencoder has a properly trained encoder.
+
+        Attributes:
+            encoder : nn.Module
+                The encoder part of the autoencoder, used as a feature extractor.
+            classifier : nn.Module
+                A sequential module containing layers for classification.
+
+        :param autoencoder: A pre-trained autoencoder, from which the encoder will be
+            extracted and used in the supervised network.
+        :type autoencoder: nn.Module
+        """
         super(SupervisedNet, self).__init__()
         # Load the encoder from the autoencoder
         self.encoder = autoencoder.encoder
