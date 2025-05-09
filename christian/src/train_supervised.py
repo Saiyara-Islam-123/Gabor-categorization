@@ -80,10 +80,12 @@ def train_supervised(model, trainloader, device, epochs=15):
             # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
+            encoder_outputs = model.encoder_output
+            zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
 
-            avg_distances[(0, 0)].append(sampled_avg_distance(pair=(0, 0), X=outputs, y=labels))
-            avg_distances[(0, 1)].append(sampled_avg_distance(pair=(0, 1), X=outputs, y=labels))
-            avg_distances[(1, 1)].append(sampled_avg_distance(pair=(1, 1), X=outputs, y=labels))
+            avg_distances[(0, 0)].append(zero)
+            avg_distances[(0, 1)].append(zero_one)
+            avg_distances[(1, 1)].append(one)
 
             # Backward pass and optimize
             loss.backward()
@@ -187,4 +189,4 @@ if __name__ == "__main__":
     sup_net.to(device)
 
     # Train the supervised model
-    train_supervised(sup_net, trainloader, device, epochs=25)
+    train_supervised(sup_net, trainloader, device, epochs=15)

@@ -67,9 +67,11 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
             loss = criterion(outputs, images)
 
-            avg_distances[(0,0)].append( sampled_avg_distance(pair=(0, 0), X=outputs, y=labels))
-            avg_distances[(0, 1)].append(sampled_avg_distance(pair=(0, 1), X=outputs, y=labels))
-            avg_distances[(1, 1)].append(sampled_avg_distance(pair=(1, 1), X=outputs, y=labels))
+            zero, zero_one, one = sampled_all_distance(model.encoded,labels)
+
+            avg_distances[(0, 0)].append(zero)
+            avg_distances[(0, 1)].append(zero_one)
+            avg_distances[(1, 1)].append(one)
 
 
             # Backward pass and optimize

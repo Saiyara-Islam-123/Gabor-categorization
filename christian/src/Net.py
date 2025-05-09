@@ -5,6 +5,8 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         # Encoder: Convolutional layers
+        self.encoded = None
+
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1),  # 128x128 -> 64x64
             nn.BatchNorm2d(16),  # Batch normalization after the Conv2d layer
@@ -57,6 +59,7 @@ class Net(nn.Module):
         for layer in self.encoder:
             x = layer(x)
             encoder_outputs.append(x)
+            self.encoded = x
 
         # Reverse the encoder outputs for skip connections
         encoder_outputs = encoder_outputs[::-1]
@@ -98,7 +101,7 @@ class SupervisedNet(nn.Module):
         super(SupervisedNet, self).__init__()
         # Load the encoder from the autoencoder
         self.encoder = autoencoder.encoder
-
+        self.encoder_output = None
         # Classifier layer on top of the encoder
         self.classifier = nn.Sequential(
             nn.Linear(256, 2)  # Adjusted input size of 256 for the updated encoder
@@ -108,6 +111,7 @@ class SupervisedNet(nn.Module):
         # Pass through the encoder
         x = self.encoder(x)
         # Pass the encoder's output through the classifier
+        self.encoder_output = x
         x = self.classifier(x)
         return x
 
