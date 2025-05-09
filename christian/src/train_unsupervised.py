@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import os
 import numpy as np
+from sampling import *
+import pandas as pd
 
 def train_unsupervised(model, trainloader, device, epochs=5):
     """
@@ -29,7 +31,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     # Define the loss function specific for autoencoder
     criterion = nn.MSELoss()  # Mean Squared Error loss for reconstruction
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     model.train()
     loss_values = []
@@ -39,17 +41,21 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     os.makedirs(results_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
 
     # Initialize the plot for real-time visualization
-    plt.ion()
-    fig, ax = plt.subplots()
-    ax.set_title("Training Loss Over Epochs")
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Loss")
-    loss_line, = ax.plot([], [], label="Loss", color="blue")  # Create the line for loss
-    ax.legend()  # Add legend once
+    #plt.ion()
+    #fig, ax = plt.subplots()
+    #ax.set_title("Training Loss Over Epochs")
+    #ax.set_xlabel("Epoch")
+    #ax.set_ylabel("Loss")
+    #loss_line, = ax.plot([], [], label="Loss", color="blue")  # Create the line for loss
+    #ax.legend()  # Add legend once
+    avg_distances = {}
+    avg_distances[(0,0)] = []
+    avg_distances[(0, 1)] = []
+    avg_distances[(1, 1)] = []
 
     for epoch in range(epochs):
         running_loss = 0.0
-        for images, _ in trainloader:  # no need for labels in unsupervised learning
+        for images, labels in trainloader:
             images = images.to(device)  # Move input images to the same device as the model
 
             # Zero the parameter gradients
@@ -57,7 +63,14 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
             # Forward pass
             outputs = model(images)
+
+
             loss = criterion(outputs, images)
+
+            avg_distances[(0,0)].append( sampled_avg_distance(pair=(0, 0), X=outputs, y=labels))
+            avg_distances[(0, 1)].append(sampled_avg_distance(pair=(0, 1), X=outputs, y=labels))
+            avg_distances[(1, 1)].append(sampled_avg_distance(pair=(1, 1), X=outputs, y=labels))
+
 
             # Backward pass and optimize
             loss.backward()
@@ -70,14 +83,14 @@ def train_unsupervised(model, trainloader, device, epochs=5):
         print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
 
         # Update the real-time plot
-        clear_output(wait=True)  # Clear the previous output
-        loss_line.set_xdata(range(1, len(loss_values) + 1))  # Update x values (epochs)
-        loss_line.set_ydata(loss_values)  # Update y values (loss)
+        #clear_output(wait=True)  # Clear the previous output
+        #loss_line.set_xdata(range(1, len(loss_values) + 1))  # Update x values (epochs)
+        #loss_line.set_ydata(loss_values)  # Update y values (loss)
 
-        ax.relim()  # Recalculate limits
-        ax.autoscale_view()  # Autoscale to fit new data
+        #ax.relim()  # Recalculate limits
+        #ax.autoscale_view()  # Autoscale to fit new data
 
-        plt.pause(0.1)  # Pause to display the updated plot
+        #plt.pause(0.1)  # Pause to display the updated plot
 
         weights_dir = "../net_weights/unsup"
         os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
@@ -85,18 +98,24 @@ def train_unsupervised(model, trainloader, device, epochs=5):
         print("unsup_net model weights saved as 'unsup_net_weights.pth'")
 
     # Keep the plot open after training
-    plt.ioff()
-    plt.close(fig)
+    #plt.ioff()
+    #plt.close(fig)
     # Save the loss values as a NumPy array
     loss_file_path = os.path.join(results_dir, "unsup_epoch_losses.npy")
     np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
+    df = pd.DataFrame()
+    df["within 0"] = avg_distances[(0,0)]
+    df["within 1"] = avg_distances[(1,1)]
+    df["between"] = avg_distances[(0,1)]
+    df.to_csv("Distance per batch unsup.csv", index=False)
+
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 
 
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation.xlsx")
+    excel_file = "categorisation.xlsx"
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file,batch_size=64)

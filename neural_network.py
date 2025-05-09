@@ -21,7 +21,7 @@ class AutoEncoder(nn.Module):
             nn.ReLU(True),
 
             nn.Flatten(),
-            nn.Linear(64 * 33 * 33, 128),
+            nn.Linear(64 * 33 * 33, 10),
             nn.ReLU(True)
 
 
@@ -31,7 +31,7 @@ class AutoEncoder(nn.Module):
 
         self.decoder = torch.nn.Sequential(
 
-            nn.Linear(128, 64 * 33 * 33),
+            nn.Linear(10, 64 * 33 * 33),
             nn.ReLU(True),
             nn.Unflatten(1, (64, 33, 33)),
             nn.ConvTranspose2d(64, 64, kernel_size=3, stride=2, padding=1, output_padding=0),
@@ -63,7 +63,7 @@ class LastLayer(nn.Module):
         self.encoder_output = None
         self.encoder = autoencoder.encoder
 
-        self.supervised_part = nn.Sequential(nn.Linear(128, 2),
+        self.supervised_part = nn.Sequential(nn.Linear(10, 2),
 
                                              )
 
@@ -73,7 +73,7 @@ class LastLayer(nn.Module):
 
         self.encoder_output = x
 
-        x = x.view(x.size(0), -1)
+
 
         x = self.supervised_part(x)
 

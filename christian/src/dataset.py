@@ -38,9 +38,10 @@ class GaborDataset(Dataset):
 
         # Load the image from the file path
         # Define the base path relative to the src folder (e.g., go up one directory)
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\GABORS\\gabors_1\\"
         # Combine with the relative path from img_path
-        img_path = os.path.join(base_dir, img_path)
+        img_path = base_dir + img_path.strip("./")
+
 
         image = Image.open(img_path).convert('RGB')  # Convert image to RGB mode
 
@@ -94,7 +95,7 @@ def plot_images(images, labels):
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation.xlsx")
+    excel_file = "categorisation.xlsx"
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file)

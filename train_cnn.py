@@ -28,6 +28,8 @@ def unsup_training():
             loss.backward()
             optimizer.step()
 
+            print(loss.item())
+
         print(f"Loss: {loss.item()}")
     return unsup_model
 
@@ -38,7 +40,7 @@ def sup_training(unsup_model):
     sup_model.train()
 
     loss_fn_sup = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(sup_model.parameters(), lr=0.001, weight_decay=0.0001)
+    optimizer = optim.Adam(sup_model.parameters(), lr=0.005, weight_decay=0.0)
 
     print("\nSupervised part!")
     for epoch in range(1):

@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import os
 import numpy as np
+from sampling import *
+import pandas as pd
 
 def train_supervised(model, trainloader, device, epochs=15):
     """
@@ -31,7 +33,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
 
     model.train()
 
@@ -40,22 +42,27 @@ def train_supervised(model, trainloader, device, epochs=15):
     os.makedirs(results_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
 
     # Initialize the plots for real-time visualization
-    plt.ion()
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))  # Two subplots: 1 for Loss, 1 for Accuracy
-    ax1.set_title("Supervised Training Loss")
-    ax1.set_xlabel("Epoch")
-    ax1.set_ylabel("Loss")
-    ax2.set_title("Supervised Training Accuracy")
-    ax2.set_xlabel("Epoch")
-    ax2.set_ylabel("Accuracy (%)")
+    #plt.ion()
+    #fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))  # Two subplots: 1 for Loss, 1 for Accuracy
+    #ax1.set_title("Supervised Training Loss")
+    #ax1.set_xlabel("Epoch")
+    #ax1.set_ylabel("Loss")
+    #ax2.set_title("Supervised Training Accuracy")
+    #ax2.set_xlabel("Epoch")
+    #ax2.set_ylabel("Accuracy (%)")
 
     # Create plot lines for loss and accuracy
     loss_values = []
     accuracy_values = []
-    loss_line, = ax1.plot([], [], label="Loss", color="blue")
-    accuracy_line, = ax2.plot([], [], label="Accuracy", color="green")
-    ax1.legend()
-    ax2.legend()
+    #loss_line, = ax1.plot([], [], label="Loss", color="blue")
+    #accuracy_line, = ax2.plot([], [], label="Accuracy", color="green")
+    #ax1.legend()
+    #ax2.legend()
+
+    avg_distances = {}
+    avg_distances[(0, 0)] = []
+    avg_distances[(0, 1)] = []
+    avg_distances[(1, 1)] = []
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -73,6 +80,10 @@ def train_supervised(model, trainloader, device, epochs=15):
             # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
+
+            avg_distances[(0, 0)].append(sampled_avg_distance(pair=(0, 0), X=outputs, y=labels))
+            avg_distances[(0, 1)].append(sampled_avg_distance(pair=(0, 1), X=outputs, y=labels))
+            avg_distances[(1, 1)].append(sampled_avg_distance(pair=(1, 1), X=outputs, y=labels))
 
             # Backward pass and optimize
             loss.backward()
@@ -94,21 +105,21 @@ def train_supervised(model, trainloader, device, epochs=15):
         print(f"Supervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}, Accuracy: {accuracy:.2f}%")
 
         # Update the real-time plots
-        clear_output(wait=True)  # Clear output for smooth updates
+        #clear_output(wait=True)  # Clear output for smooth updates
 
         # Update loss plot
-        loss_line.set_xdata(range(1, len(loss_values) + 1))  # Update x values (epochs)
-        loss_line.set_ydata(loss_values)  # Update y values (loss)
-        ax1.relim()  # Recalculate axis limits
-        ax1.autoscale_view()  # Autoscale the view to fit data
+        #loss_line.set_xdata(range(1, len(loss_values) + 1))  # Update x values (epochs)
+        #loss_line.set_ydata(loss_values)  # Update y values (loss)
+        #ax1.relim()  # Recalculate axis limits
+        #ax1.autoscale_view()  # Autoscale the view to fit data
 
         # Update accuracy plot
-        accuracy_line.set_xdata(range(1, len(accuracy_values) + 1))  # Update x values (epochs)
-        accuracy_line.set_ydata(accuracy_values)  # Update y values (accuracy)
-        ax2.relim()  # Recalculate axis limits
-        ax2.autoscale_view()  # Autoscale the view to fit data
+        #accuracy_line.set_xdata(range(1, len(accuracy_values) + 1))  # Update x values (epochs)
+        #accuracy_line.set_ydata(accuracy_values)  # Update y values (accuracy)
+        #ax2.relim()  # Recalculate axis limits
+        #ax2.autoscale_view()  # Autoscale the view to fit data
 
-        plt.pause(0.1)  # Pause to display the updated plot
+        #plt.pause(0.1)  # Pause to display the updated plot
 
         # Save the trained model weights
         # Save the trained model weights
@@ -129,6 +140,12 @@ def train_supervised(model, trainloader, device, epochs=15):
     np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 
+    df = pd.DataFrame()
+    df["within 0"] = avg_distances[(0, 0)]
+    df["within 1"] = avg_distances[(1, 1)]
+    df["between"] = avg_distances[(0, 1)]
+    df.to_csv("Distance per batch sup.csv", index=False)
+
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
     np.save(accuracy_file_path, np.array(accuracy_values))  # Save as .npy file
@@ -141,7 +158,7 @@ def train_supervised(model, trainloader, device, epochs=15):
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation.xlsx")
+    excel_file = "categorisation.xlsx"
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=64)

@@ -81,13 +81,7 @@ def reconstruction(model, testloader, device):
 
 if __name__ == "__main__":
     # Define paths and directories
-    excel_file = os.path.join(
-        os.path.expanduser("~"),
-        "Gabor-categorization",
-        "christian",
-        "experimentFiles",
-        "categorisation.xlsx"
-    )
+    excel_file = "categorisation.xlsx"
     weights_dir = "../net_weights/unsup/"
 
     # Load the data
