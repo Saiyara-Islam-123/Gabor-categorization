@@ -65,6 +65,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
             outputs = model(images)
 
 
+
             loss = criterion(outputs, images)
 
             zero, zero_one, one = sampled_all_distance(model.encoded,labels)
@@ -96,7 +97,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
         weights_dir = "../net_weights/unsup"
         os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-        torch.save(model.state_dict(), "../net_weights/unsup/unsup_net_weights_"+str(epoch)+".pth")
+        #torch.save(model.state_dict(), "../net_weights/unsup/unsup_net_weights_"+str(epoch)+".pth")
         print("unsup_net model weights saved as 'unsup_net_weights.pth'")
 
     # Keep the plot open after training
@@ -109,7 +110,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     df["within 0"] = avg_distances[(0,0)]
     df["within 1"] = avg_distances[(1,1)]
     df["between"] = avg_distances[(0,1)]
-    df.to_csv("Distance per batch unsup.csv", index=False)
+    #df.to_csv("Distance per batch unsup.csv", index=False)
 
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 

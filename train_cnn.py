@@ -2,39 +2,63 @@ import neural_network
 from neural_network import *
 from torch import optim
 from dataset import *
+from sampling import *
+import pandas as pd
+from reconstruction import *
+import numpy as np
 
-
-X_train, y_train, X_test, y_test = test_train_split()
-batches = list(torch.split(X_train, 1))
-batches_of_labels = list(torch.split(y_train, 1))
+trainloader, valloader, testloader = load_gabor_data(excel_file="categorisation.xlsx")
 
 def unsup_training():
 
     unsup_model = AutoEncoder()
     loss_fn_unsup = nn.MSELoss()
 
+    avg_distances = {}
+    avg_distances[(0,0)] = []
+    avg_distances[(0,1)] = []
+    avg_distances[(1,1)] = []
+
     optimizer = optim.Adam(unsup_model.parameters(), lr=0.01, weight_decay=0.01)
     unsup_model.train()
 
     print("\nUnsupervised part!")
-    for epoch in range(1):
-        for i in range(len(batches)):
+    for epoch in range(15):
+        for images, labels in trainloader:
             optimizer.zero_grad()
 
-            outputs = unsup_model(batches[i].reshape(1, 1, 513, 513))
 
+            outputs = unsup_model(images)
+            loss = loss_fn_unsup(outputs, images)
 
-            loss = loss_fn_unsup(outputs, batches[i].reshape(1, 1, 513, 513))
+            zero, zero_one, one = sampled_all_distance(unsup_model.encoded, labels)
+
+            avg_distances[(0, 0)].append(zero)
+            avg_distances[(0, 1)].append(zero_one)
+            avg_distances[(1, 1)].append(one)
+
             loss.backward()
             optimizer.step()
 
-            print(loss.item())
+            print(loss.item(), epoch)
 
-        print(f"Loss: {loss.item()}")
+    df = pd.DataFrame()
+    df["within 0"] = avg_distances[(0, 0)]
+    df["within 1"] = avg_distances[(1, 1)]
+    df["between"] = avg_distances[(0, 1)]
+    df.to_csv("Distance per batch unsup non-learner.csv", index=False)
+
+
     return unsup_model
 
 
 def sup_training(unsup_model):
+    avg_distances = {}
+    avg_distances[(0, 0)] = []
+    avg_distances[(0, 1)] = []
+    avg_distances[(1, 1)] = []
+    accuracy_values = []
+
     sup_model = LastLayer(unsup_model)
 
     sup_model.train()
@@ -43,36 +67,43 @@ def sup_training(unsup_model):
     optimizer = optim.Adam(sup_model.parameters(), lr=0.005, weight_decay=0.0)
 
     print("\nSupervised part!")
-    for epoch in range(1):
-        for i in range(len(batches)):
+    for epoch in range(15):
+        for images, labels in trainloader:
             optimizer.zero_grad()
-            outputs = (sup_model(batches[i].reshape(1, 1, 513, 513)))
+            outputs = sup_model(images)
 
-            loss = loss_fn_sup(outputs, batches_of_labels[i])
-            print(outputs, batches_of_labels[i], loss.item(), i, epoch)
+            loss = loss_fn_sup(outputs, labels)
+
+            zero, zero_one, one = sampled_all_distance(sup_model.encoder_output, labels)
+
+            avg_distances[(0, 0)].append(zero)
+            avg_distances[(0, 1)].append(zero_one)
+            avg_distances[(1, 1)].append(one)
+            accuracy_values.append(acc(sup_model))
             loss.backward()
             optimizer.step()
+            print(loss.item(), epoch)
+
+
+    df = pd.DataFrame()
+    df["within 0"] = avg_distances[(0, 0)]
+    df["within 1"] = avg_distances[(1, 1)]
+    df["between"] = avg_distances[(0, 1)]
+    df["Accuracy"] = accuracy_values
+    df.to_csv("Distance per batch sup non-learner.csv", index=False)
 
     return sup_model
 
-def acc(model):
-    pred_labels = model(X_test.reshape(80, 1, 513, 513)).argmax(dim=1)
-
-
-    acc = (pred_labels == y_test).float().mean().item()
-    print(pred_labels)
-    print(y_test)
-
-    print("\nAccuracy = ")
-    print(acc * 100)
+def acc(sup_model): #percentage correct
+    for images, labels in testloader:
+        outputs = sup_model(images)
+        _, predicted = torch.max(outputs, 1)
+        acc = (predicted == labels).float().mean().item()
+        print("Accuracy: " + str(acc * 100))
     return acc
+
 
 if __name__ == "__main__":
     unsup_model = unsup_training()
-    torch.save(unsup_model.state_dict(), "unsup_model.pth")
-
-    unsup_model = neural_network.AutoEncoder()
-    unsup_model.load_state_dict(torch.load("unsup_model.pth", weights_only=True), strict=True)
 
     sup_model = sup_training(unsup_model)
-    acc(sup_model)

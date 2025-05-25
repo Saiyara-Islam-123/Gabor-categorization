@@ -33,7 +33,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
 
     model.train()
 
@@ -63,6 +63,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     avg_distances[(0, 0)] = []
     avg_distances[(0, 1)] = []
     avg_distances[(1, 1)] = []
+
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -98,13 +99,15 @@ def train_supervised(model, trainloader, device, epochs=15):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
+            accuracy = 100 * correct / total
+            accuracy_values.append(accuracy)
+            print(accuracy)
+
         # Compute average loss and accuracy for the epoch
         avg_loss = running_loss / len(trainloader)
-        accuracy = 100 * correct / total
         loss_values.append(avg_loss)
-        accuracy_values.append(accuracy)
 
-        print(f"Supervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}, Accuracy: {accuracy:.2f}%")
+        print(f"Supervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f},")
 
         # Update the real-time plots
         #clear_output(wait=True)  # Clear output for smooth updates
@@ -146,7 +149,8 @@ def train_supervised(model, trainloader, device, epochs=15):
     df["within 0"] = avg_distances[(0, 0)]
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
-    df.to_csv("Distance per batch sup.csv", index=False)
+    df["acc"] = accuracy_values
+    df.to_csv("Distance per batch sup fast.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
