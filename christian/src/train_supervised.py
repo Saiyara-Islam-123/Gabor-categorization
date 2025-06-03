@@ -33,7 +33,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 
     model.train()
 
@@ -81,12 +81,7 @@ def train_supervised(model, trainloader, device, epochs=15):
             # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
-            encoder_outputs = model.encoder_output
-            zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
 
-            avg_distances[(0, 0)].append(zero)
-            avg_distances[(0, 1)].append(zero_one)
-            avg_distances[(1, 1)].append(one)
 
             # Backward pass and optimize
             loss.backward()
@@ -95,13 +90,21 @@ def train_supervised(model, trainloader, device, epochs=15):
             running_loss += loss.item()
 
             # Calculate accuracy
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
 
-            accuracy = 100 * correct / total
-            accuracy_values.append(accuracy)
-            print(accuracy)
+        encoder_outputs = model.encoder_output
+        zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
+
+        avg_distances[(0, 0)].append(zero)
+        avg_distances[(0, 1)].append(zero_one)
+        avg_distances[(1, 1)].append(one)
+
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+        accuracy = 100 * correct / total
+        accuracy_values.append(accuracy)
+        print(accuracy)
 
         # Compute average loss and accuracy for the epoch
         avg_loss = running_loss / len(trainloader)
@@ -150,7 +153,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc"] = accuracy_values
-    df.to_csv("Distance per batch sup fast.csv", index=False)
+    df.to_csv("Distance every epoch sup.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")

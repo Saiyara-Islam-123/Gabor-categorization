@@ -4,11 +4,11 @@ import pandas as pd
 
 
 def plot():
-    df_unsup = pd.read_csv("Distance per batch unsup.csv")
+    df_unsup = pd.read_csv("Distance every epoch unsup.csv")
     df_unsup = df_unsup.tail(15)
 
 
-    df_sup = pd.read_csv("Distance per batch sup fast.csv")
+    df_sup = pd.read_csv("Distance every epoch sup.csv")
     df_sup = df_sup.head(15)
 
 
@@ -36,8 +36,8 @@ def plot():
     ax2.set_ylabel('Accuracy')
 
 
-    plt.xlabel("Batch")
-    plt.title("Gabor categorization acc and distances across batches")
+    plt.xlabel("Epoch")
+    plt.title("Gabor categorization acc and distances across epochs")
 
     plt.show()
 

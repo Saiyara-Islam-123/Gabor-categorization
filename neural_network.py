@@ -10,35 +10,24 @@ class AutoEncoder(nn.Module):
 
         self.encoder = torch.nn.Sequential(
 
-            nn.Conv2d(3, 16, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(True),
-            nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(True),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(True),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
-
-
             nn.Flatten(),
-            nn.Linear(128 * 8 * 8, 128),
-            nn.ReLU(True)
+            nn.Linear(128 * 128 * 3, 600),
+            nn.ReLU(),
+            nn.Linear(600, 500),
+            nn.ReLU(),
+            nn.Linear(500, 128),
 
         )
 
         self.decoder = torch.nn.Sequential(
 
-            nn.Linear(128, 128 * 8 * 8),
-            nn.ReLU(True),
-            nn.Unflatten(1, (128, 8, 8)),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(True),
+            nn.Linear(128, 500),
+            nn.ReLU(),
+            nn.Linear(500, 600),
+            nn.ReLU(),
+            nn.Linear(600, 128*128*3),
+            nn.Unflatten(1, (3, 128, 128)),
 
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1, output_padding=0),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
-            # Correcting stride/padding
-            nn.ReLU(True),
-            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, output_padding=0),  # Exact match for 28x28
             nn.Sigmoid()
 
         )

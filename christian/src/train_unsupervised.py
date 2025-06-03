@@ -68,18 +68,18 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
             loss = criterion(outputs, images)
 
-            zero, zero_one, one = sampled_all_distance(model.encoded,labels)
-
-            avg_distances[(0, 0)].append(zero)
-            avg_distances[(0, 1)].append(zero_one)
-            avg_distances[(1, 1)].append(one)
-
 
             # Backward pass and optimize
             loss.backward()
             optimizer.step()
 
             running_loss += loss.item()
+
+        zero, zero_one, one = sampled_all_distance(model.encoded, labels)
+
+        avg_distances[(0, 0)].append(zero)
+        avg_distances[(0, 1)].append(zero_one)
+        avg_distances[(1, 1)].append(one)
 
         avg_loss = running_loss / len(trainloader)
         loss_values.append(avg_loss)
@@ -110,7 +110,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     df["within 0"] = avg_distances[(0,0)]
     df["within 1"] = avg_distances[(1,1)]
     df["between"] = avg_distances[(0,1)]
-    #df.to_csv("Distance per batch unsup.csv", index=False)
+    df.to_csv("Distance every epoch unsup.csv", index=False)
 
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 

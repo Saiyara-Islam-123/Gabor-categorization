@@ -23,7 +23,7 @@ def unsup_training():
     unsup_model.train()
 
     print("\nUnsupervised part!")
-    for epoch in range(15):
+    for epoch in range(5):
         for images, labels in trainloader:
             optimizer.zero_grad()
 
@@ -67,7 +67,7 @@ def sup_training(unsup_model):
     optimizer = optim.Adam(sup_model.parameters(), lr=0.005, weight_decay=0.0)
 
     print("\nSupervised part!")
-    for epoch in range(15):
+    for epoch in range(5):
         for images, labels in trainloader:
             optimizer.zero_grad()
             outputs = sup_model(images)
