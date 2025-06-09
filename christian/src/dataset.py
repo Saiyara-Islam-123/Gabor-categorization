@@ -54,6 +54,17 @@ class GaborDataset(Dataset):
 
         return image, label
 
+def load_whole_dataset(excel_file):
+    transform = transforms.Compose([
+        transforms.Resize((128, 128)),  # Resize images to 128x128
+        transforms.ToTensor()  # Converts image to tensor and scales to [0, 1]
+    ])
+
+    # Load the dataset
+    dataset = GaborDataset(excel_file, transform=transform)
+
+    return DataLoader(dataset, batch_size=400, shuffle=True)
+
 
 # Data loader function
 def load_gabor_data(excel_file, batch_size=64):

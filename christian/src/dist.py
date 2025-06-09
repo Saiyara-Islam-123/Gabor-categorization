@@ -34,7 +34,9 @@ def sampled_all_distance(X,y):
 
     within_zero, between, within_one =  d[(0,0)], d[(0,1)], d[(1,1)]
 
+
     return np.mean(np.array(within_zero)), np.mean(np.array(between)), np.mean(np.array(within_one))
+
 
 
 #I basically find the Euclidean distance between two random datapoints from these two bigger matrices.

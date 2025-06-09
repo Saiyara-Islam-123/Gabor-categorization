@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import os
 import numpy as np
-from sampling import *
+from dist import *
 import pandas as pd
 
 def train_supervised(model, trainloader, device, epochs=15):
@@ -33,7 +33,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
 
     model.train()
 
@@ -69,6 +69,7 @@ def train_supervised(model, trainloader, device, epochs=15):
         running_loss = 0.0
         correct = 0
         total = 0
+        batch = 0
         for images, labels in trainloader:
             # Prepare the images and labels
             images = images.to(device)  # Move input images to the same device as the model
@@ -89,22 +90,31 @@ def train_supervised(model, trainloader, device, epochs=15):
 
             running_loss += loss.item()
 
+            encoder_outputs = model.encoder_output
+            zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
+
+            avg_distances[(0, 0)].append(zero)
+            avg_distances[(0, 1)].append(zero_one)
+            avg_distances[(1, 1)].append(one)
+
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+            accuracy = 100 * correct / total
+            accuracy_values.append(accuracy)
+            print(accuracy)
+
             # Calculate accuracy
+            save_dir = "../net_weights/unsup"
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
 
-        encoder_outputs = model.encoder_output
-        zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
-
-        avg_distances[(0, 0)].append(zero)
-        avg_distances[(0, 1)].append(zero_one)
-        avg_distances[(1, 1)].append(one)
-
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-
-        accuracy = 100 * correct / total
-        accuracy_values.append(accuracy)
-        print(accuracy)
+            weights_dir = "../net_weights/sup"
+            os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
+            torch.save(model.state_dict(), "../net_weights/sup/sup_net_weights_"+str(epoch)+  " " + str(batch) +".pth")
+            print("sup_net model weights saved as sup_net_weights.pth'")
+            batch += 1
 
         # Compute average loss and accuracy for the epoch
         avg_loss = running_loss / len(trainloader)
@@ -131,14 +141,7 @@ def train_supervised(model, trainloader, device, epochs=15):
 
         # Save the trained model weights
         # Save the trained model weights
-        save_dir = "../net_weights/unsup"
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
 
-        weights_dir = "../net_weights/sup"
-        os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-        torch.save(model.state_dict(), "../net_weights/sup/sup_net_weights_" + str(epoch) + ".pth")
-        print("sup_net model weights saved as sup_net_weights.pth'")
 
     # Keep the plots open after training
     #plt.ioff()
@@ -153,7 +156,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc"] = accuracy_values
-    df.to_csv("Distance every epoch sup.csv", index=False)
+    df.to_csv("LR=0.0001, Distance every batch sup.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
@@ -174,18 +177,11 @@ if __name__ == "__main__":
 
     # Initialize the net and load the lastest encoder weights
     unsup_net = Net()
-    # Path to the weights folder
-    weights_dir = "../net_weights/unsup/"
-    # Count the number of files that match the pattern
-    file_count = len([f for f in os.listdir(weights_dir) if f.startswith("unsup_net_weights_") and f.endswith(".pth")])
 
-    # Load the last available weights based on the count
-    if file_count > 0:
-        weight_path = f"{weights_dir}/unsup_net_weights_{file_count - 1}.pth"
-        unsup_net.load_state_dict(torch.load(weight_path))
-        print(f"Loaded weights from: {weight_path}")
-    else:
-        raise FileNotFoundError("No weight files found in the folder.")
+    weight_path = "../net_weights/unsup/unsup_net_weights_14 4.pth"
+
+    unsup_net.load_state_dict(torch.load(weight_path))
+
 
 
     # Initialize the supervised model using the encoder from the trained autoencoder

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import os
 import numpy as np
-from sampling import *
+from dist import *
 import pandas as pd
 
 def train_unsupervised(model, trainloader, device, epochs=5):
@@ -55,6 +55,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
     for epoch in range(epochs):
         running_loss = 0.0
+        batch = 0
         for images, labels in trainloader:
             images = images.to(device)  # Move input images to the same device as the model
 
@@ -64,10 +65,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
             # Forward pass
             outputs = model(images)
 
-
-
             loss = criterion(outputs, images)
-
 
             # Backward pass and optimize
             loss.backward()
@@ -75,14 +73,22 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
             running_loss += loss.item()
 
-        zero, zero_one, one = sampled_all_distance(model.encoded, labels)
+            zero, zero_one, one = sampled_all_distance(model.encoded, labels)
 
-        avg_distances[(0, 0)].append(zero)
-        avg_distances[(0, 1)].append(zero_one)
-        avg_distances[(1, 1)].append(one)
+            avg_distances[(0, 0)].append(zero)
+            avg_distances[(0, 1)].append(zero_one)
+            avg_distances[(1, 1)].append(one)
 
-        avg_loss = running_loss / len(trainloader)
-        loss_values.append(avg_loss)
+            avg_loss = running_loss / len(trainloader)
+            loss_values.append(avg_loss)
+
+            weights_dir = "../net_weights/unsup"
+            os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
+            torch.save(model.state_dict(), "../net_weights/unsup/unsup_net_weights_"+str(epoch)+ " " + str(batch) +".pth")
+            print("unsup_net model weights saved as 'unsup_net_weights.pth'")
+
+            batch += 1
+
         print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
 
         # Update the real-time plot
@@ -95,10 +101,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
         #plt.pause(0.1)  # Pause to display the updated plot
 
-        weights_dir = "../net_weights/unsup"
-        os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-        #torch.save(model.state_dict(), "../net_weights/unsup/unsup_net_weights_"+str(epoch)+".pth")
-        print("unsup_net model weights saved as 'unsup_net_weights.pth'")
+
 
     # Keep the plot open after training
     #plt.ioff()
@@ -110,7 +113,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     df["within 0"] = avg_distances[(0,0)]
     df["within 1"] = avg_distances[(1,1)]
     df["between"] = avg_distances[(0,1)]
-    df.to_csv("Distance every epoch unsup.csv", index=False)
+    df.to_csv("LR=0.0001, Distance every batch unsup.csv", index=False)
 
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 
