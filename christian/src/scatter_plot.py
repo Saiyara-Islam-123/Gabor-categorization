@@ -1,25 +1,26 @@
 import torch
 from Net import *
 from sklearn.manifold import TSNE
-from dataset import load_whole_dataset
+from dataset import load_gabor_data
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import re
-from plotting import *
+
 
 label_colors = {
-    1: "red",
-    0: "purple"
+    1: "limegreen",
+    0: "green"
 
 }
+
 
 def of_two(matrix):
     tsne = TSNE(n_components=2, random_state=42)
     return tsne.fit_transform(matrix)
 
 
-def scatter_plot(train_type, weights, time_step):
+def scatter_plot(train_type, weights):
 
     if train_type == "sup":
         unsup_net = Net()
@@ -35,7 +36,7 @@ def scatter_plot(train_type, weights, time_step):
 
     m_outputs = []
     excel_file = "categorisation.xlsx"
-    dataset = load_whole_dataset(excel_file)
+    dataset, _, _ = load_gabor_data(excel_file, batch_size=320)
 
     for images, labels in dataset:
 
@@ -61,13 +62,18 @@ def scatter_plot(train_type, weights, time_step):
 
         color = label_colors[labels_arr[i]]
 
-        plt.scatter(x_axis, y_axis, color=color, s=6)
+        plt.scatter(x_axis, y_axis, color=color, s=10)
+
+    plt.scatter([], [], color= "limegreen", label ="Cat1" )
+    plt.scatter([], [], color= "green", label='Cat2')
 
 
     splitted = weights.split(" ")
-    plt.title( train_type +" gabor scatter plot, Epoch: " + re.sub(r'[a-z _ / .]', "", splitted[0]) + ", Batch: " + splitted[1].strip(".pth"))
+    plt.title( train_type +"ervised training scatterplot, Epoch: " + re.sub(r'[a-z _ / .]', "", splitted[0]) + ", Batch: " + splitted[1].strip(".pth"))
     plt.xlabel('Dimension 1')
     plt.ylabel('Dimension 2')
+
+    plt.legend()
 
     plt.savefig(w.strip(".pth"))
     plt.show()
@@ -75,7 +81,7 @@ def scatter_plot(train_type, weights, time_step):
 
 
 if __name__ == '__main__':
-    weights_unsup = [
+    weights_sup = [
                     "sup_net_weights_0 0.pth",
                     "sup_net_weights_0 1.pth",
                     "sup_net_weights_0 2.pth",
@@ -106,10 +112,26 @@ if __name__ == '__main__':
                         "sup_net_weights_4 3.pth",
                         "sup_net_weights_4 4.pth",
 
+                        "sup_net_weights_5 0.pth",
+                        "sup_net_weights_5 1.pth",
+                        "sup_net_weights_5 2.pth",
+                        "sup_net_weights_5 3.pth",
+                        "sup_net_weights_5 4.pth",
 
+                        "sup_net_weights_6 0.pth",
+                        "sup_net_weights_6 1.pth",
+                        "sup_net_weights_6 2.pth",
+                        "sup_net_weights_6 3.pth",
+                        "sup_net_weights_6 4.pth",
+
+                        "sup_net_weights_7 0.pth",
+                        "sup_net_weights_7 1.pth",
+                        "sup_net_weights_7 2.pth",
+                        "sup_net_weights_7 3.pth",
+                        "sup_net_weights_7 4.pth",
 
 
                      ]
 
-    for w in weights_unsup:
+    for w in weights_sup:
         scatter_plot("sup", "../net_weights/sup/" + w)

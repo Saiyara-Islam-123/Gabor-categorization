@@ -5,7 +5,7 @@ from PIL import Image
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-
+torch.random.manual_seed(9)
 
 # Custom dataset class for loading images and labels from Excel
 class GaborDataset(Dataset):

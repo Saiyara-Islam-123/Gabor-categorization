@@ -14,8 +14,8 @@ def merge(im1, im2):
         new_im.paste(im, (x_offset, 0))
         x_offset += im.size[0]
 
-    new_im.save(im1.strip(".png") + " combined.png")
+    new_im.save("Combined " +im1.strip(".png") + ".png")
 
-for i in range(5):
+for i in range(8):
     for j in range(5):
         merge(f"sup_net_weights_{i} {j}.png", f"sup {i} {j} .png")
