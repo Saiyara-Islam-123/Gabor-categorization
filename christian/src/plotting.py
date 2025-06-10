@@ -101,5 +101,5 @@ def plot_batch(time_step):
 
 if __name__ == '__main__':
 
-    for i in range(8):
-        plot_epoch(i)
+    for i in range(40):
+        plot_batch(i)

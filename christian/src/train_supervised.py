@@ -33,7 +33,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
 
     model.train()
 
@@ -156,7 +156,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc"] = accuracy_values
-    df.to_csv("LR=0.0001, Distance every batch sup.csv", index=False)
+    df.to_csv("LR=0.01, Distance every batch sup.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")

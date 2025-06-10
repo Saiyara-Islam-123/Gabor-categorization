@@ -82,13 +82,60 @@ def scatter_plot(train_type, weights):
 
 if __name__ == '__main__':
     weights_sup = [     "sup_net_weights_0 0.pth",
+                        "sup_net_weights_0 1.pth",
+                        "sup_net_weights_0 2.pth",
+                        "sup_net_weights_0 3.pth",
+                        "sup_net_weights_0 4.pth",
+
                         "sup_net_weights_1 0.pth",
+                        "sup_net_weights_1 1.pth",
+                        "sup_net_weights_1 2.pth",
+                        "sup_net_weights_1 3.pth",
+                        "sup_net_weights_1 4.pth",
+
                         "sup_net_weights_2 0.pth",
+                        "sup_net_weights_2 1.pth",
+                        "sup_net_weights_2 2.pth",
+                        "sup_net_weights_2 3.pth",
+                        "sup_net_weights_2 4.pth",
+
+
+
                         "sup_net_weights_3 0.pth",
+                        "sup_net_weights_3 1.pth",
+                        "sup_net_weights_3 2.pth",
+                        "sup_net_weights_3 3.pth",
+                        "sup_net_weights_3 4.pth",
+
+
                         "sup_net_weights_4 0.pth",
+                        "sup_net_weights_4 1.pth",
+                        "sup_net_weights_4 2.pth",
+                        "sup_net_weights_4 3.pth",
+                        "sup_net_weights_4 4.pth",
+
+
                         "sup_net_weights_5 0.pth",
+                        "sup_net_weights_5 1.pth",
+                        "sup_net_weights_5 2.pth",
+                        "sup_net_weights_5 3.pth",
+                        "sup_net_weights_5 4.pth",
+
+
+
                         "sup_net_weights_6 0.pth",
+                        "sup_net_weights_6 1.pth",
+                        "sup_net_weights_6 2.pth",
+                        "sup_net_weights_6 3.pth",
+                        "sup_net_weights_6 4.pth",
+
+
                         "sup_net_weights_7 0.pth",
+                        "sup_net_weights_7 1.pth",
+                        "sup_net_weights_7 2.pth",
+                        "sup_net_weights_7 3.pth",
+                        "sup_net_weights_7 4.pth",
+
 
 
                      ]
