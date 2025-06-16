@@ -76,7 +76,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch):
     plt.ylabel('Dimension 2')
 
     plt.legend()
-    plt.savefig(f"whole_plots/scatter_plots/sup, every batch, slow lr, 1 epoch/{train_type} lr = {lr}, {batch} {epoch}.png")
+    plt.savefig(f"whole_plots/scatter_plots/sup, every batch, slow lr, 2 epochs/{train_type} lr = {lr}, {batch} {epoch}.png")
     plt.show()
 
 def plot_raw_data():
@@ -126,8 +126,8 @@ if __name__ == '__main__':
         #c += 1
 
 
-    weights_sup = os.listdir("../net_weights/sup_4000/slow lr, 1 epoch")
+    weights_sup = os.listdir("../net_weights/sup_4000/slow lr, 2 epochs")
     c = 0
     for w in weights_sup:
-        scatter_plot(train_type="sup", weights="../net_weights/sup_4000/slow lr, 1 epoch/"+w, lr=0.0001, batch=c, epoch=0)
+        scatter_plot(train_type="sup", weights="../net_weights/sup_4000/slow lr, 2 epochs/"+w, lr=0.0001, batch=c, epoch=0)
         c += 1

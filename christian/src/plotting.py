@@ -55,7 +55,7 @@ def plot_skip_batch(time_step, csv_unsup, csv_sup, lr, loc):
 
 
 
-def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc):
+def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc, is_sup):
     df_no_train = pd.read_csv("Distance no train.csv")
 
     df_unsup = pd.read_csv(csv_unsup)
@@ -94,7 +94,13 @@ def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, 
 
     plt.xlabel("Epoch")
     plt.title("Gabor categorization accuracy and distances across training batches")
-    plt.savefig(loc+f"/Lr={lr} " + str(time_step)+ ".png")
+    if is_sup == "sup":
+        plt.savefig(loc+f"/Lr={lr} " + str(time_step-51)+ ".png")
+    elif is_sup == "unsup":
+        plt.savefig(loc + f"/Lr={lr} " + str(time_step - 1) + ".png")
+    else:
+        plt.savefig(loc + f"/Lr={lr} " + str(time_step) + ".png")
+
     plt.show()
 
 
@@ -102,11 +108,11 @@ def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, 
 if __name__ == '__main__':
 
     #no train
-    plot_batch(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-               csv_sup="LR=0.0001, Distance every batch sup.csv", num_unsup_rows=50, num_sup_rows=50, lr=0.0001,
-               loc="whole_plots/blue-green/slow_lr/no_train")
+    #plot_batch(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
+               #csv_sup="LR=0.0001, Distance every batch sup.csv", num_unsup_rows=50, num_sup_rows=50, lr=0.0001,
+               #loc="whole_plots/blue-green/slow_lr/no_train")
 
 
-    #for i in range(51, 101): #sup
+    for i in range(51, 151): #sup
         #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
-        #plot_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", num_unsup_rows=50, num_sup_rows=50, lr=0.0001, loc="whole_plots/blue-green/slow_lr/sup")
+        plot_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=100, lr=0.0001, loc="whole_plots/blue-green/slow_lr/sup_2_epochs", is_sup="sup")

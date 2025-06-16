@@ -107,7 +107,7 @@ def train_supervised(model, trainloader, device, lr, epochs=15):
 
             weights_dir = "../net_weights/sup"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), f"../net_weights/sup_4000/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
+            torch.save(model.state_dict(), f"../net_weights/sup_4000/slow lr, 2 epochs/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
             print("sup_net model weights saved as sup_net_weights.pth'")
             batch += 1
 
@@ -151,7 +151,7 @@ def train_supervised(model, trainloader, device, lr, epochs=15):
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc"] = accuracy_values
-    df.to_csv(f"LR={lr}, Distance every batch sup.csv", index=False)
+    df.to_csv(f"LR={lr}, Distance every batch sup, 2 epochs.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
@@ -186,4 +186,4 @@ if __name__ == "__main__":
     sup_net.to(device)
 
     # Train the supervised model
-    train_supervised(sup_net, trainloader, device, epochs=1, lr=0.0001)
+    train_supervised(sup_net, trainloader, device, epochs=2, lr=0.0001)

@@ -16,7 +16,7 @@ def merge(im1, im2, title):
         new_im.paste(im, (x_offset, 0))
         x_offset += im.size[0]
 
-    new_im.save("whole_plots/combined/slow_lr/"+title+" Combined.png")
+    new_im.save("whole_plots/combined/slow_lr_2_epochs/"+title+" Combined.png")
 
 if __name__ == "__main__":
 
@@ -27,13 +27,13 @@ if __name__ == "__main__":
 
 
     '''
-    lines = os.listdir("whole_plots/blue-green/slow_lr/sup")
+    lines = os.listdir("whole_plots/blue-green/slow_lr/sup_2_epochs")
 
-    scatter_plots = os.listdir("whole_plots/scatter_plots/sup, every batch, slow lr")
+    scatter_plots = os.listdir("whole_plots/scatter_plots/sup, every batch, slow lr, 2 epochs")
 
-    for i in range(50):
-        a = "whole_plots/blue-green/slow_lr/sup/" + lines[i]
-        b = "whole_plots/scatter_plots/sup, every batch, slow lr, 1 epoch/"+scatter_plots[i]
+    for i in range(100):
+        a = "whole_plots/blue-green/slow_lr/sup_2_epochs/" + lines[i]
+        b = "whole_plots/scatter_plots/sup, every batch, slow lr, 2 epochs/"+scatter_plots[i]
         title = lines[i].split(" ")[1].strip(".png")
         merge(a, b,title="z sup "+title)
     
