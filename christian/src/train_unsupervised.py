@@ -10,7 +10,7 @@ import numpy as np
 from dist import *
 import pandas as pd
 
-def train_unsupervised(model, trainloader, device, epochs=5):
+def train_unsupervised(model, trainloader, device, lr, epochs=5):
     """
     Trains an unsupervised model (e.g., autoencoder) using a specified dataset and parameters.
     This function uses Mean Squared Error (MSE) loss for reconstruction and updates the model's
@@ -31,7 +31,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     # Define the loss function specific for autoencoder
     criterion = nn.MSELoss()  # Mean Squared Error loss for reconstruction
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     model.train()
     loss_values = []
@@ -84,7 +84,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 
             weights_dir = "../net_weights/unsup"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), "../net_weights/unsup/unsup_net_weights_"+str(epoch)+ " " + str(batch) +".pth")
+            torch.save(model.state_dict(), "../net_weights/unsup_4000/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
             print("unsup_net model weights saved as 'unsup_net_weights.pth'")
 
             batch += 1
@@ -113,7 +113,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     df["within 0"] = avg_distances[(0,0)]
     df["within 1"] = avg_distances[(1,1)]
     df["between"] = avg_distances[(0,1)]
-    df.to_csv("LR=0.0001, Distance every batch unsup.csv", index=False)
+    df.to_csv(f"LR={lr}, Distance every batch unsup.csv", index=False)
 
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 
@@ -121,7 +121,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = "categorisation.xlsx"
+    excel_file = "categorisation 4000.xlsx"
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file,batch_size=64)
@@ -133,4 +133,4 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader, device, epochs=15)
+    train_unsupervised(unsup_net, trainloader, device, lr=0.0001, epochs=1)

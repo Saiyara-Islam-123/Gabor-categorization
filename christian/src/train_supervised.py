@@ -10,7 +10,7 @@ import numpy as np
 from dist import *
 import pandas as pd
 
-def train_supervised(model, trainloader, device, epochs=15):
+def train_supervised(model, trainloader, device, lr, epochs=15):
     """
     Trains a given model using supervised learning with a provided dataloader, device,
     and a specified number of epochs. The function uses the CrossEntropyLoss for
@@ -33,7 +33,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.0001)
 
     model.train()
 
@@ -105,14 +105,9 @@ def train_supervised(model, trainloader, device, epochs=15):
             accuracy_values.append(accuracy)
             print(accuracy)
 
-            # Calculate accuracy
-            save_dir = "../net_weights/unsup"
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-
             weights_dir = "../net_weights/sup"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), "../net_weights/sup/sup_net_weights_"+str(epoch)+  " " + str(batch) +".pth")
+            torch.save(model.state_dict(), f"../net_weights/sup_4000/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
             print("sup_net model weights saved as sup_net_weights.pth'")
             batch += 1
 
@@ -156,7 +151,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc"] = accuracy_values
-    df.to_csv("LR=0.01, Distance every batch sup.csv", index=False)
+    df.to_csv(f"LR={lr}, Distance every batch sup.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
@@ -170,7 +165,7 @@ def train_supervised(model, trainloader, device, epochs=15):
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = "categorisation.xlsx"
+    excel_file = "categorisation 4000.xlsx"
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=64)
@@ -178,10 +173,9 @@ if __name__ == "__main__":
     # Initialize the net and load the lastest encoder weights
     unsup_net = Net()
 
-    weight_path = "../net_weights/unsup/unsup_net_weights_14 4.pth"
+    weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
 
     unsup_net.load_state_dict(torch.load(weight_path))
-
 
 
     # Initialize the supervised model using the encoder from the trained autoencoder
@@ -192,4 +186,4 @@ if __name__ == "__main__":
     sup_net.to(device)
 
     # Train the supervised model
-    train_supervised(sup_net, trainloader, device, epochs=15)
+    train_supervised(sup_net, trainloader, device, epochs=1, lr=0.0001)

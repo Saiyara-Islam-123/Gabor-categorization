@@ -1,8 +1,9 @@
 import random
 import torch.nn.functional
-
+from dataset import load_gabor_data
 random.seed(0)
 import numpy as np
+import pandas as pd
 
 def sampled_all_distance(X,y):
     d = {}
@@ -41,3 +42,23 @@ def sampled_all_distance(X,y):
 
 #I basically find the Euclidean distance between two random datapoints from these two bigger matrices.
 
+if __name__== '__main__':
+    excel_file = "categorisation 4000.xlsx"
+    trainloader, _, _ = load_gabor_data(excel_file, batch_size=64)
+    avg_distances = {}
+    avg_distances[(0, 0)] = []
+    avg_distances[(0, 1)] = []
+    avg_distances[(1, 1)] = []
+    df = pd.DataFrame()
+
+    for images, labels in trainloader:
+        zero, zero_one, one = (sampled_all_distance(X=images, y=labels))
+        avg_distances[(0, 0)].append(zero)
+        avg_distances[(0, 1)].append(zero_one)
+        avg_distances[(1, 1)].append(one)
+        break
+
+    df["within 0"] = avg_distances[(0, 0)]
+    df["within 1"] = avg_distances[(1, 1)]
+    df["between"] = avg_distances[(0, 1)]
+    df.to_csv("Distance no train.csv", index=False)

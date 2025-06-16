@@ -20,11 +20,11 @@ def of_two(matrix):
     return tsne.fit_transform(matrix)
 
 
-def scatter_plot(train_type, weights):
+def scatter_plot(train_type, weights, lr, batch, epoch):
 
     if train_type == "sup":
         unsup_net = Net()
-        unsup_weights_path = "../net_weights/unsup/unsup_net_weights_14 4.pth"
+        unsup_weights_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
         unsup_net.load_state_dict(torch.load(unsup_weights_path))
 
         m = SupervisedNet(unsup_net)
@@ -35,8 +35,9 @@ def scatter_plot(train_type, weights):
         m.load_state_dict(torch.load(weights))
 
     m_outputs = []
-    excel_file = "categorisation.xlsx"
-    dataset, _, _ = load_gabor_data(excel_file, batch_size=320)
+
+    excel_file = "categorisation 4000.xlsx"
+    dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
 
     for images, labels in dataset:
 
@@ -44,19 +45,21 @@ def scatter_plot(train_type, weights):
             _ = m(images)
             encoder_outputs = m.encoder_output
             m_outputs.append(encoder_outputs.detach().numpy())
-            labels_arr = (labels.detach().numpy())
+            labels_arr=(labels.detach().numpy())
 
         elif train_type == "unsup":
             _ = m(images)
             encoder_outputs = m.encoded
             m_outputs.append(encoder_outputs.detach().numpy())
-            labels_arr = (labels.detach().numpy())
+            labels_arr=(labels.detach().numpy())
+        break
 
     X_tnse = of_two(m_outputs[0])
+    print(m_outputs[0].shape)
     pc1 = X_tnse[:, 0]
     pc2 = X_tnse[:, 1]
 
-    for i in range(labels_arr.shape[0]):
+    for i in range(len(labels_arr)):
         x_axis = pc1[i]
         y_axis = pc2[i]
 
@@ -68,77 +71,63 @@ def scatter_plot(train_type, weights):
     plt.scatter([], [], color= "green", label='Cat2')
 
 
-    splitted = weights.split(" ")
-    plt.title( train_type +"ervised training scatterplot, Epoch: " + re.sub(r'[a-z _ / .]', "", splitted[0]) + ", Batch: " + splitted[1].strip(".pth"))
+    plt.title( train_type +f"ervised training scatterplot, Epoch: {epoch} Batch: {batch}" )
     plt.xlabel('Dimension 1')
     plt.ylabel('Dimension 2')
 
     plt.legend()
+    plt.savefig(f"whole_plots/scatter_plots/sup, every batch, slow lr, 1 epoch/{train_type} lr = {lr}, {batch} {epoch}.png")
+    plt.show()
 
-    plt.savefig(w.strip(".pth"))
+def plot_raw_data():
+    excel_file = "categorisation 4000.xlsx"
+    dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
+
+    im = []
+
+    for images, labels in dataset:
+        im.append(images)
+        labels_arr = (labels.detach().numpy())
+        break
+
+    print(im[0].shape)
+    X_tnse = of_two(im[0].reshape(500, 128*128*3))
+    pc1 = X_tnse[:, 0]
+    pc2 = X_tnse[:, 1]
+
+    for i in range(len(labels_arr)):
+        x_axis = pc1[i]
+        y_axis = pc2[i]
+
+        color = label_colors[labels_arr[i]]
+
+        plt.scatter(x_axis, y_axis, color=color, s=10)
+
+    plt.scatter([], [], color= "limegreen", label ="Cat1" )
+    plt.scatter([], [], color= "green", label='Cat2')
+
+
+    plt.title( "No training scatterplot" )
+    plt.xlabel('Dimension 1')
+    plt.ylabel('Dimension 2')
+
+    plt.legend()
+    plt.savefig("whole_plots/scatter_plots/no_train/no_training.png")
     plt.show()
 
 
 
 if __name__ == '__main__':
-    weights_sup = [     "sup_net_weights_0 0.pth",
-                        "sup_net_weights_0 1.pth",
-                        "sup_net_weights_0 2.pth",
-                        "sup_net_weights_0 3.pth",
-                        "sup_net_weights_0 4.pth",
-
-                        "sup_net_weights_1 0.pth",
-                        "sup_net_weights_1 1.pth",
-                        "sup_net_weights_1 2.pth",
-                        "sup_net_weights_1 3.pth",
-                        "sup_net_weights_1 4.pth",
-
-                        "sup_net_weights_2 0.pth",
-                        "sup_net_weights_2 1.pth",
-                        "sup_net_weights_2 2.pth",
-                        "sup_net_weights_2 3.pth",
-                        "sup_net_weights_2 4.pth",
+    #plot_raw_data()
+    #weights_unsup = os.listdir("../net_weights/unsup_4000")
+    #c = 0
+    #for w in weights_unsup:
+        #scatter_plot(train_type="unsup", weights="../net_weights/unsup_4000/" + w, lr=0.0001, batch=c, epoch=0)
+        #c += 1
 
 
-
-                        "sup_net_weights_3 0.pth",
-                        "sup_net_weights_3 1.pth",
-                        "sup_net_weights_3 2.pth",
-                        "sup_net_weights_3 3.pth",
-                        "sup_net_weights_3 4.pth",
-
-
-                        "sup_net_weights_4 0.pth",
-                        "sup_net_weights_4 1.pth",
-                        "sup_net_weights_4 2.pth",
-                        "sup_net_weights_4 3.pth",
-                        "sup_net_weights_4 4.pth",
-
-
-                        "sup_net_weights_5 0.pth",
-                        "sup_net_weights_5 1.pth",
-                        "sup_net_weights_5 2.pth",
-                        "sup_net_weights_5 3.pth",
-                        "sup_net_weights_5 4.pth",
-
-
-
-                        "sup_net_weights_6 0.pth",
-                        "sup_net_weights_6 1.pth",
-                        "sup_net_weights_6 2.pth",
-                        "sup_net_weights_6 3.pth",
-                        "sup_net_weights_6 4.pth",
-
-
-                        "sup_net_weights_7 0.pth",
-                        "sup_net_weights_7 1.pth",
-                        "sup_net_weights_7 2.pth",
-                        "sup_net_weights_7 3.pth",
-                        "sup_net_weights_7 4.pth",
-
-
-
-                     ]
-
+    weights_sup = os.listdir("../net_weights/sup_4000/slow lr, 1 epoch")
+    c = 0
     for w in weights_sup:
-        scatter_plot("sup", "../net_weights/sup/" + w)
+        scatter_plot(train_type="sup", weights="../net_weights/sup_4000/slow lr, 1 epoch/"+w, lr=0.0001, batch=c, epoch=0)
+        c += 1

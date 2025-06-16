@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def plot_epoch(time_step):
-    df_unsup = pd.read_csv("LR=0.0001, Distance every batch unsup.csv")
-    df_unsup = df_unsup.tail(40)
+def plot_skip_batch(time_step, csv_unsup, csv_sup, lr, loc):
+    df_unsup = pd.read_csv(csv_unsup)
+    df_unsup = df_unsup.tail(50)
     rows_unsup = []
 
 
-    df_sup = pd.read_csv("LR=0.0001, Distance every batch sup.csv")
-    df_sup = df_sup.head(40)
+    df_sup = pd.read_csv(csv_sup)
+    df_sup = df_sup.head(50)
     rows_sup = []
 
     for r in range(len(df_unsup["between"])):
@@ -20,17 +20,16 @@ def plot_epoch(time_step):
 
     df_unsup_epoch = pd.DataFrame(rows_unsup)
     df_sup_epoch = pd.DataFrame(rows_sup)
-
     accs = df_sup_epoch["acc"]
     df_sup_epoch.drop(columns=["acc"], inplace=True)
 
     df_whole = pd.concat([df_unsup_epoch, df_sup_epoch])
 
     x = []
-    for k in range(16):
+    for k in range(20):
         x.append(k)
     x2 = []
-    for k in range(8, 16):
+    for k in range(10, 20):
         x2.append(k)
 
 
@@ -38,68 +37,76 @@ def plot_epoch(time_step):
     ax1.plot(x, df_whole['within 1'], color="limegreen", label="within Cat1")
     ax1.plot(x, df_whole['within 0'], color="green", label="within Cat2")
     ax1.plot(x, df_whole['between'], color="blue", label="between")
-    ax1.axvline(x=7, color='r', linestyle='--')
+    ax1.axvline(x=9, color='r', linestyle='--')
     ax1.set_ylabel('Distance')
     ax1.legend()
 
     ax2 = ax1.twinx()
     ax2.plot(x2, accs, color="coral", label="accuracy")
-    ax1.axvline(x=time_step + 8, color='black', linestyle='dashed')
+    ax1.axvline(x=time_step + 10, color='black', linestyle='dashed')
     ax2.set_ylabel('Accuracy')
 
     plt.xlabel("Epoch")
     plt.title("Gabor categorization accuracy and distances across training Epochs")
     batch = 0
     epoch = time_step
-    plt.savefig("sup " + str(epoch) + " " + str(batch) + " .png")
+    plt.savefig(loc+f"/Lr={lr}" + str(epoch) + " " + str(batch)  + " .png")
     plt.show()
 
 
 
-def plot_batch(time_step):
-    df_unsup = pd.read_csv("LR=0.0001, Distance every batch unsup.csv")
-    df_unsup = df_unsup.tail(40)
+def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc):
+    df_no_train = pd.read_csv("Distance no train.csv")
+
+    df_unsup = pd.read_csv(csv_unsup)
+    df_unsup = df_unsup.tail(num_unsup_rows)
 
 
-    df_sup = pd.read_csv("LR=0.0001, Distance every batch sup.csv")
-    df_sup = df_sup.head(40)
+    df_sup = pd.read_csv(csv_sup)
+    df_sup = df_sup.head(num_sup_rows)
 
 
     accs = df_sup["acc"]
     df_sup.drop(columns=["acc"], inplace=True)
 
-    df_whole = pd.concat([df_unsup, df_sup])
+    df_whole = pd.concat([df_no_train, df_unsup , df_sup])
     x = []
-    for k in range(80):
+    for k in range(num_unsup_rows+num_sup_rows+1):
         x.append(k)
     x2 = []
-    for k in range(40, 80):
+    for k in range(num_unsup_rows+1, num_unsup_rows+num_sup_rows+1):
         x2.append(k)
 
     fig, ax1 = plt.subplots()
     ax1.plot(x, df_whole['within 1'], color="limegreen", label="within Cat1")
     ax1.plot(x, df_whole['within 0'], color="green", label="within Cat2")
     ax1.plot(x, df_whole['between'], color="blue", label="between")
-    ax1.axvline(x=39, color='r', linestyle='--')
+    ax1.axvline(x=num_unsup_rows, color='r', linestyle='--')
+    ax1.axvline(x=1, color='r', linestyle='--')
     ax1.set_ylabel('Distance')
     ax1.legend()
 
     ax2 = ax1.twinx()
     ax2.plot(x2, accs, color="coral", label="accuracy")
-    ax1.axvline(x=time_step+40, color='black', linestyle='dashed')
+    ax1.axvline(x=time_step, color='black', linestyle='dashed')
     ax2.set_ylabel('Accuracy')
 
 
     plt.xlabel("Epoch")
     plt.title("Gabor categorization accuracy and distances across training batches")
-    batch = time_step % 5
-    epoch = time_step // 5
-    plt.savefig("sup " + str(epoch) + " " + str(batch)  + " .png")
+    plt.savefig(loc+f"/Lr={lr} " + str(time_step)+ ".png")
     plt.show()
 
 
 
 if __name__ == '__main__':
 
-    for i in range(40):
-        plot_batch(i)
+    #no train
+    plot_batch(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
+               csv_sup="LR=0.0001, Distance every batch sup.csv", num_unsup_rows=50, num_sup_rows=50, lr=0.0001,
+               loc="whole_plots/blue-green/slow_lr/no_train")
+
+
+    #for i in range(51, 101): #sup
+        #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
+        #plot_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", num_unsup_rows=50, num_sup_rows=50, lr=0.0001, loc="whole_plots/blue-green/slow_lr/sup")
