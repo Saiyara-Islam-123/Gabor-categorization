@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import re
-
+from scipy.spatial import procrustes
 
 label_colors = {
     1: "limegreen",
@@ -18,6 +18,30 @@ label_colors = {
 def of_two(matrix):
     tsne = TSNE(n_components=2, random_state=42)
     return tsne.fit_transform(matrix)
+
+
+def get_standard_dataset():
+    weights = "../net_weights/sup_4000/slow lr, 2 epochs/sup_net_weights_ lr=0.0001 1 49.pth"
+    unsup_net = Net()
+    unsup_weights_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
+    unsup_net.load_state_dict(torch.load(unsup_weights_path))
+
+    m = SupervisedNet(unsup_net)
+    m.load_state_dict(torch.load(weights))
+
+    m_outputs = []
+
+    excel_file = "categorisation 4000.xlsx"
+    dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
+
+    for images, labels in dataset:
+        _ = m(images)
+        encoder_outputs = m.encoder_output
+        m_outputs.append(encoder_outputs.detach().numpy())
+        break
+
+    X_tnse = of_two(m_outputs[0])
+    return X_tnse
 
 
 def scatter_plot(train_type, weights, lr, batch, epoch):
@@ -54,10 +78,13 @@ def scatter_plot(train_type, weights, lr, batch, epoch):
             labels_arr=(labels.detach().numpy())
         break
 
+    standard_dataset = get_standard_dataset()
     X_tnse = of_two(m_outputs[0])
+    _, mtx2, _ = procrustes(standard_dataset, X_tnse)
+
     print(m_outputs[0].shape)
-    pc1 = X_tnse[:, 0]
-    pc2 = X_tnse[:, 1]
+    pc1 = mtx2[:, 0]
+    pc2 = mtx2[:, 1]
 
     for i in range(len(labels_arr)):
         x_axis = pc1[i]
@@ -76,7 +103,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch):
     plt.ylabel('Dimension 2')
 
     plt.legend()
-    plt.savefig(f"whole_plots/scatter_plots/sup, every batch, slow lr, 2 epochs/{train_type} lr = {lr}, {batch} {epoch}.png")
+    #plt.savefig(f"whole_plots/scatter_plots/sup, every batch, slow lr, 2 epochs/{train_type} lr = {lr}, {batch} {epoch}.png")
     plt.show()
 
 def plot_raw_data():
@@ -119,15 +146,15 @@ def plot_raw_data():
 
 if __name__ == '__main__':
     #plot_raw_data()
-    #weights_unsup = os.listdir("../net_weights/unsup_4000")
-    #c = 0
-    #for w in weights_unsup:
-        #scatter_plot(train_type="unsup", weights="../net_weights/unsup_4000/" + w, lr=0.0001, batch=c, epoch=0)
-        #c += 1
-
-
-    weights_sup = os.listdir("../net_weights/sup_4000/slow lr, 2 epochs")
+    weights_unsup = os.listdir("../net_weights/unsup_4000")
     c = 0
-    for w in weights_sup:
-        scatter_plot(train_type="sup", weights="../net_weights/sup_4000/slow lr, 2 epochs/"+w, lr=0.0001, batch=c, epoch=0)
+    for w in weights_unsup:
+        scatter_plot(train_type="unsup", weights="../net_weights/unsup_4000/" + w, lr=0.0001, batch=c, epoch=0)
         c += 1
+
+
+    #weights_sup = os.listdir("../net_weights/sup_4000/slow lr, 2 epochs")
+    #c = 0
+    #for w in weights_sup:
+        #scatter_plot(train_type="sup", weights="../net_weights/sup_4000/slow lr, 2 epochs/"+w, lr=0.0001, batch=c, epoch=0)
+        #c += 1
