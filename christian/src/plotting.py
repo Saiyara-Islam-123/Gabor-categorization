@@ -108,11 +108,17 @@ def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, 
 if __name__ == '__main__':
 
     #no train
-    #plot_batch(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-               #csv_sup="LR=0.0001, Distance every batch sup.csv", num_unsup_rows=50, num_sup_rows=50, lr=0.0001,
-               #loc="whole_plots/blue-green/slow_lr/no_train")
+    '''
+    plot_batch(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
+               csv_sup="LR=0.005, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=100, lr=0.005,
+               loc="whole_plots/blue-green/fast_lr/no_train_2_epochs", is_sup="no_train_2_epochs")
 
+    
+    for i in range(1, 51): #unsup
+        #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
+        plot_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.005, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=100, lr=0.005, loc="whole_plots/blue-green/fast_lr/unsup", is_sup="unsup")
+    '''
 
     for i in range(51, 151): #sup
         #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
-        plot_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=100, lr=0.0001, loc="whole_plots/blue-green/slow_lr/sup_2_epochs", is_sup="sup")
+        plot_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.005, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=100, lr=0.005, loc="whole_plots/blue-green/fast_lr/sup_2_epochs", is_sup="sup")

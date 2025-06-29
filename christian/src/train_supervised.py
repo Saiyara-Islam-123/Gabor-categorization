@@ -105,9 +105,9 @@ def train_supervised(model, trainloader, device, lr, epochs=15):
             accuracy_values.append(accuracy)
             print(accuracy)
 
-            weights_dir = "../net_weights/sup"
+            weights_dir = "../net_weights/sup_fast"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), f"../net_weights/sup_4000/slow lr, 2 epochs/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
+            torch.save(model.state_dict(), f"../net_weights/sup_fast/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
             print("sup_net model weights saved as sup_net_weights.pth'")
             batch += 1
 
@@ -186,4 +186,4 @@ if __name__ == "__main__":
     sup_net.to(device)
 
     # Train the supervised model
-    train_supervised(sup_net, trainloader, device, epochs=2, lr=0.0001)
+    train_supervised(sup_net, trainloader, device, epochs=2, lr=0.005)
