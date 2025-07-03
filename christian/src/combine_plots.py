@@ -20,29 +20,29 @@ def merge(im1, im2, title, loc):
 
 if __name__ == "__main__":
     '''
-    a = "whole_plots/blue-green/fast_lr/no_train_2_epochs/Lr=0.005 0.png"
+    a = "whole_plots/blue-green/control/no_train_2_epochs/Lr=0.005 0.png"
     b = "whole_plots/scatter_plots/no_train/no_training.png"
-    merge(a, b, title="no_train ", loc = "whole_plots/combined/fast_lr_2_epochs")
+    merge(a, b, title="no_train ", loc = "whole_plots/combined/control")
     
-
-    lines = os.listdir("whole_plots/blue-green/fast_lr/unsup_2_epochs")
+    lines = os.listdir("whole_plots/blue-green/control/unsup_2_epochs")
 
     scatter_plots = os.listdir("whole_plots/scatter_plots/unsup, every batch")
 
     for i in range(50):
-        a = "whole_plots/blue-green/fast_lr/unsup_2_epochs/" + lines[i]
+        a = "whole_plots/blue-green/control/unsup_2_epochs/" + lines[i]
         b = "whole_plots/scatter_plots/unsup, every batch/"+scatter_plots[i]
         title = lines[i].split(" ")[1].strip(".png")
-        merge(a, b,title="unsup "+title, loc = "whole_plots/combined/fast_lr_2_epochs")
+        merge(a, b,title="unsup "+title, loc = "whole_plots/combined/control")
     
     '''
-    lines = os.listdir("whole_plots/blue-green/fast_lr/sup_2_epochs")
-    scatter_plots = os.listdir("whole_plots/scatter_plots/sup_fast")
 
-    for i in range(100):
-        print(i)
-        a = "whole_plots/blue-green/fast_lr/sup_2_epochs/" + lines[i]
-        b = "whole_plots/scatter_plots/sup_fast/" + scatter_plots[i]
-        title = lines[i].split(" ")[1].strip(".png")
-        merge(a, b, title="z sup " + title, loc = "whole_plots/combined/fast_lr_2_epochs")
+
+    for i in range(2):
+        for j in range(18):
+            scatter_plot = f"sup lr = 0.0001, {i} {j}.png"
+            a = f"whole_plots/blue-green/control/sup_2_epochs/Lr=0.005 {j+18*i}.png"
+            b = "whole_plots/scatter_plots/sup_control/" + scatter_plot
+            title = str(i) + " "+ str(j)
+            merge(a, b, title="z sup " + title, loc = "whole_plots/combined/control")
     
+

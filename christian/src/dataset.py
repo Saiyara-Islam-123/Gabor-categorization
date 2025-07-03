@@ -9,7 +9,7 @@ torch.random.manual_seed(9)
 
 # Custom dataset class for loading images and labels from Excel
 class GaborDataset(Dataset):
-    def __init__(self, excel_file, transform=None):
+    def __init__(self, excel_file, base_dir, transform=None):
         """
         Initializes an instance of a class that processes data from an Excel file
         and optionally applies a transformation function.
@@ -24,6 +24,7 @@ class GaborDataset(Dataset):
         """
         self.data = pd.read_excel(excel_file)  # Read the Excel file
         self.transform = transform
+        self.base_dir = base_dir
 
     def __len__(self):
         """Returns the total number of samples in the dataset."""
@@ -38,9 +39,9 @@ class GaborDataset(Dataset):
 
         # Load the image from the file path
         # Define the base path relative to the src folder (e.g., go up one directory)
-        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\"
+        #base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
         # Combine with the relative path from img_path
-        img_path = base_dir + img_path.strip("./")
+        img_path = self.base_dir + img_path.strip("./")
 
 
         image = Image.open(img_path).convert('RGB')  # Convert image to RGB mode
@@ -67,7 +68,7 @@ def load_whole_dataset(excel_file):
 
 
 # Data loader function
-def load_gabor_data(excel_file, batch_size=64):
+def load_gabor_data(excel_file, base_dir, batch_size=64, split=0.8):
     # Define a transform to preprocess the images
     transform = transforms.Compose([
         transforms.Resize((128, 128)),  # Resize images to 128x128
@@ -75,11 +76,11 @@ def load_gabor_data(excel_file, batch_size=64):
     ])
 
     # Load the dataset
-    dataset = GaborDataset(excel_file, transform=transform)
+    dataset = GaborDataset(excel_file, transform=transform, base_dir=base_dir)
 
     # Split the dataset into training (80%), validation (10%), and test (10%)
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
+    train_size = int(split * len(dataset))
+    val_size = int((1-split)/2 * len(dataset))
     test_size = len(dataset) - train_size - val_size
     train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
 

@@ -81,7 +81,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch):
     m_outputs = []
 
     excel_file = "categorisation 4000.xlsx"
-    dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
+    dataset, _, _ = load_gabor_data(excel_file, batch_size=500, base_dir="C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\")
 
     for images, labels in dataset:
 
@@ -125,7 +125,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch):
     plt.ylabel('Dimension 2')
 
     plt.legend()
-    plt.savefig(f"whole_plots/scatter_plots/sup, every batch, slow lr (no rotation)/{train_type} lr = {lr}, {batch} {epoch}.png")
+    plt.savefig(f"whole_plots/scatter_plots/sup_control/{train_type} lr = {lr}, {epoch} {batch}.png")
     plt.show()
 
 def plot_raw_data():
@@ -177,8 +177,15 @@ if __name__ == '__main__':
         #c += 1
 
 
-    weights_sup = os.listdir("../net_weights/sup_fast")
-    c = 0
-    for w in weights_sup:
-        scatter_plot(train_type="sup", weights="../net_weights/sup_fast/"+w, lr=0.0001, batch=c, epoch=0)
-        c += 1
+    weights_sup = os.listdir("../net_weights/sup_control")
+
+    for i in range(len(weights_sup)):
+        w = weights_sup[i]
+        w_splitted = w.split("lr=0.005")
+        w_splitted = w_splitted[1]
+        w_splitted = (w_splitted.split(" "))
+        e = w_splitted[1]
+        c = w_splitted[2].strip(".pth")
+        print(e, c)
+        scatter_plot(train_type="sup", weights="../net_weights/sup_control/"+w, lr=0.0001, batch=c, epoch=e)
+
