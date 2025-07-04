@@ -38,7 +38,7 @@ class GaborDataset(Dataset):
 
         # Load the image from the file path
         # Define the base path relative to the src folder (e.g., go up one directory)
-        base_dir = "./GABORS/gabors_1\\"
+        base_dir = "../GABORS/gabors_1\\"
         # Combine with the relative path from img_path
         img_path = base_dir + img_path.strip("./")
 

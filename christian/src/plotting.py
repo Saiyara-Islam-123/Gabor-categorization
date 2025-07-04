@@ -112,8 +112,8 @@ def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_ro
     df_sup = df_sup.head(num_sup_rows)
 
 
-    accs_true = df_sup["acc true"]
-    accs_control = df_sup["acc control"]
+    accs_size = df_sup["acc size"]
+    accs_freq = df_sup["acc freq"]
     df_sup.drop(columns=["acc true", "acc control"], inplace=True)
 
 
@@ -135,8 +135,8 @@ def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_ro
     ax1.legend()
 
     ax2 = ax1.twinx()
-    ax2.plot(x2, accs_true, color="coral", label="true accuracy")
-    ax2.plot(x2, accs_control, color="coral", label="control accuracy",linestyle='dashed')
+    ax2.plot(x2, accs_freq, color="coral", label="frequency accuracy")
+    ax2.plot(x2, accs_size, color="coral", label="size accuracy",linestyle='dashed')
     ax1.axvline(x=time_step, color='black', linestyle='dashed')
     ax2.set_ylabel('Accuracy')
     ax2.legend()
@@ -157,9 +157,9 @@ def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_ro
 if __name__ == '__main__':
 
     #no train
-    '''
+
     plot_batch_control(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-               csv_sup="LR=0.005, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=36, lr=0.005,
+               csv_sup="LR=0.005, Distance every batch sup, 2 epochs with size.csv", num_unsup_rows=50, num_sup_rows=36, lr=0.005,
                loc="whole_plots/blue-green/control/no_train_2_epochs", is_sup="no_train_2_epochs")
     '''
     for i in range(1, 51): #unsup
@@ -177,3 +177,4 @@ if __name__ == '__main__':
                            csv_sup="LR=0.005, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50,
                            num_sup_rows=36, lr=0.005,
                            loc="whole_plots/blue-green/control/sup_2_epochs", is_sup="sup")
+    '''
