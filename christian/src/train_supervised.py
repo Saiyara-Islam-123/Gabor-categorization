@@ -221,7 +221,7 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
         total_true = 0
         total_control = 0
         batch = 0
-        real_train_loader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=500, base_dir="C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\")
+        real_train_loader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=50)
 
         for images, labels in trainloader:
             # Prepare the images and labels
@@ -242,12 +242,7 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
 
             running_loss += loss_true.item()
 
-            encoder_outputs = model.encoder_output
-            zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
 
-            avg_distances[(0, 0)].append(zero)
-            avg_distances[(0, 1)].append(zero_one)
-            avg_distances[(1, 1)].append(one)
 
             _, predicted_control = torch.max(outputs.data, 1)
             total_control += labels.size(0)
@@ -259,6 +254,14 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
 
             for images_true, labels_true in real_train_loader:
                 outputs_2 = model(images_true)
+
+                encoder_outputs = model.encoder_output
+
+                zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
+
+                avg_distances[(0, 0)].append(zero)
+                avg_distances[(0, 1)].append(zero_one)
+                avg_distances[(1, 1)].append(one)
 
                 _, predicted_true = torch.max(outputs_2.data, 1)
                 total_true += labels_true.size(0)
@@ -358,7 +361,7 @@ if __name__ == "__main__":
 
     # Load the data
     base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-    trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=10, base_dir=base_dir, split=0.9)
+    trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=64, base_dir=base_dir)
 
     # Initialize the net and load the lastest encoder weights
     unsup_net = Net()
@@ -376,4 +379,4 @@ if __name__ == "__main__":
 
 
     # Train the supervised model
-    train_supervised_control(sup_net, trainloader, device, epochs=2, lr=0.005)
+    train_supervised_control(sup_net, trainloader, device, epochs=5, lr=0.007)

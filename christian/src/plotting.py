@@ -112,9 +112,9 @@ def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_ro
     df_sup = df_sup.head(num_sup_rows)
 
 
-    accs_size = df_sup["acc size"]
-    accs_freq = df_sup["acc freq"]
-    df_sup.drop(columns=["acc true", "acc control"], inplace=True)
+    accs_size = df_sup["acc control"]
+    accs_freq = df_sup["acc true"]
+    df_sup.drop(columns=["acc control", "acc true"], inplace=True)
 
 
     df_whole = pd.concat([df_no_train, df_unsup , df_sup])
@@ -158,23 +158,25 @@ if __name__ == '__main__':
 
     #no train
 
+
+    '''
     plot_batch_control(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-               csv_sup="LR=0.005, Distance every batch sup, 2 epochs with size.csv", num_unsup_rows=50, num_sup_rows=36, lr=0.005,
+               csv_sup="LR=0.007, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=32, lr=0.007,
                loc="whole_plots/blue-green/control/no_train_2_epochs", is_sup="no_train_2_epochs")
     '''
+
     for i in range(1, 51): #unsup
         #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
         plot_batch_control(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-                           csv_sup="LR=0.005, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50,
-                           num_sup_rows=36, lr=0.005,
+                           csv_sup="LR=0.007, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50,
+                           num_sup_rows=32, lr=0.007,
                            loc="whole_plots/blue-green/control/unsup_2_epochs", is_sup="unsup")
 
 
 
-    for i in range(51, 87): #sup
+    for i in range(51, 50+32+1): #sup
         #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
         plot_batch_control(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-                           csv_sup="LR=0.005, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50,
-                           num_sup_rows=36, lr=0.005,
+                           csv_sup="LR=0.007, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50,
+                           num_sup_rows=32, lr=0.007,
                            loc="whole_plots/blue-green/control/sup_2_epochs", is_sup="sup")
-    '''
