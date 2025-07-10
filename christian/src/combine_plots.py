@@ -20,30 +20,22 @@ def merge(im1, im2, title, loc):
 
 if __name__ == "__main__":
     '''
-    a = "whole_plots/blue-green/control/no_train_2_epochs/Lr=0.007 0.png"
+    a = "whole_plots/blue-green/control_slow/no_train/Lr=0.0001 0.png"
     b = "whole_plots/scatter_plots/no_train/no_training.png"
-    merge(a, b, title="no_train ", loc = "whole_plots/combined/control")
-
-
-    lines = os.listdir("whole_plots/blue-green/control/unsup_2_epochs")
-
-    scatter_plots = os.listdir("whole_plots/scatter_plots/unsup, every batch")
+    merge(a, b, title="no_train ", loc = "whole_plots/combined/control_slow")
+   
 
     for i in range(50):
-        a = "whole_plots/blue-green/control/unsup_2_epochs/" + lines[i]
-        b = "whole_plots/scatter_plots/unsup, every batch/"+scatter_plots[i]
-        title = lines[i].split(" ")[1].strip(".png")
-        merge(a, b,title="unsup "+title, loc = "whole_plots/combined/control")
-    
+        a = f"whole_plots/blue-green/control_slow/unsup/Lr=0.007 {i}.png"
+        b = "whole_plots/scatter_plots/unsup, every batch/"+f"unsup lr = 0.0001, 0 {i}.png"
+        title = f"Lr=0.0001 {i}.png".split(" ")[1].strip(".png")
+        merge(a, b,title="unsup "+title, loc = "whole_plots/combined/control_slow")
+
     '''
+    for i in range(5):
+        for j in range(5):
 
-
-    for i in range(2):
-        for j in range(16):
-            scatter_plot = f"sup lr = 0.007, {i} {j}.png"
-            a = f"whole_plots/blue-green/control/sup_2_epochs/Lr=0.007 {j+16*i}.png"
-            b = "whole_plots/scatter_plots/sup_control/" + scatter_plot
+            a = f"whole_plots/blue-green/control_slow/sup/Lr=0.007 {i*5+j}.png"
+            b = f"whole_plots/scatter_plots/sup_control_slow/sup lr = 0.0001, {i} {j}.png"
             title = str(i) + " "+ str(j)
-            merge(a, b, title="z sup " + title, loc = "whole_plots/combined/control")
-    
-
+            merge(a, b, title="z sup " + title, loc = "whole_plots/combined/control_slow")

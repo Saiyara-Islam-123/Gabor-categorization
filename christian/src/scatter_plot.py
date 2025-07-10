@@ -64,7 +64,7 @@ def get_standard_dataset():
 
 
 
-def scatter_plot(train_type, weights, lr, batch, epoch):
+def scatter_plot(train_type, weights, lr, batch, epoch, loc):
 
     if train_type == "sup":
         unsup_net = Net()
@@ -125,7 +125,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch):
     plt.ylabel('Dimension 2')
 
     plt.legend()
-    plt.savefig(f"whole_plots/scatter_plots/sup_old_gabor_dataset_code/{train_type} lr = {lr}, {epoch} {batch}.png")
+    plt.savefig(f"whole_plots/scatter_plots/{loc}/{train_type} lr = {lr}, {epoch} {batch}.png")
     plt.show()
 
 def plot_raw_data():
@@ -170,22 +170,17 @@ if __name__ == '__main__':
     #get_standard_dataset()
 
     #plot_raw_data()
-    #weights_unsup = os.listdir("../net_weights/unsup_4000")
-    #c = 0
-    #for w in weights_unsup:
-        #scatter_plot(train_type="unsup", weights="../net_weights/unsup_4000/" + w, lr=0.0001, batch=c, epoch=0)
-        #c += 1
+    '''
+    for i in range(50):
+        scatter_plot(train_type="unsup", weights=f"../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 {i}.pth", lr=0.0001, batch=i, epoch=0, loc="unsup, every batch")
 
+    ''' 
 
-    weights_sup = os.listdir("../net_weights/sup_control")
+    for i in range(5):
+        for j in range(5):
+            w = f"../net_weights/sup_control/sup_net_weights_ lr=0.0001 {i} {j}.pth"
 
-    for i in range(len(weights_sup)):
-        w = weights_sup[i]
-        w_splitted = w.split("lr=0.007")
-        w_splitted = w_splitted[1]
-        w_splitted = (w_splitted.split(" "))
-        e = w_splitted[1]
-        c = w_splitted[2].strip(".pth")
-        print(e, c)
-        scatter_plot(train_type="sup", weights="../net_weights/sup_control/"+w, lr=0.007, batch=c, epoch=e)
-
+            e = i
+            c = j
+            print(e, c)
+            scatter_plot(train_type="sup", weights=w, lr=0.0001, batch=c, epoch=e, loc="sup_control_slow")

@@ -221,7 +221,7 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
         total_true = 0
         total_control = 0
         batch = 0
-        real_train_loader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=50)
+        real_train_loader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
 
         for images, labels in trainloader:
             # Prepare the images and labels
@@ -318,8 +318,8 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc true"] = accuracy_values_true
-    df["acc control"] = accuracy_values_control
-    df.to_csv(f"LR={lr}, Control, Distance every batch sup, 2 epochs.csv", index=False)
+    df["acc control_fast"] = accuracy_values_control
+    df.to_csv(f"LR={lr}, Control, Distance every batch sup, 5 epochs.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
@@ -356,12 +356,12 @@ if __name__ == "__main__":
     # Train the supervised model
     train_supervised(sup_net, trainloader, device, epochs=2, lr=0.005)
     '''
-    #Train on control
+    #Train on control_fast blue green
     excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
 
     # Load the data
     base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-    trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=64, base_dir=base_dir)
+    trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
 
     # Initialize the net and load the lastest encoder weights
     unsup_net = Net()

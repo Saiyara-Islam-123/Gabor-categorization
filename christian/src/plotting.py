@@ -158,25 +158,22 @@ if __name__ == '__main__':
 
     #no train
 
-
-    '''
     plot_batch_control(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-               csv_sup="LR=0.007, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50, num_sup_rows=32, lr=0.007,
-               loc="whole_plots/blue-green/control/no_train_2_epochs", is_sup="no_train_2_epochs")
-    '''
+               csv_sup="LR=0.0001, Control, Distance every batch sup, 5 epochs.csv", num_unsup_rows=50, num_sup_rows=25, lr=0.007,
+               loc="whole_plots/blue-green/control_slow/no_train", is_sup="no_train_2_epochs")
 
     for i in range(1, 51): #unsup
         #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
         plot_batch_control(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-                           csv_sup="LR=0.007, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50,
-                           num_sup_rows=32, lr=0.007,
-                           loc="whole_plots/blue-green/control/unsup_2_epochs", is_sup="unsup")
+                           csv_sup="LR=0.0001, Control, Distance every batch sup, 5 epochs.csv", num_unsup_rows=50,
+                           num_sup_rows=25, lr=0.007,
+                           loc="whole_plots/blue-green/control_slow/unsup", is_sup="unsup")
 
 
 
-    for i in range(51, 50+32+1): #sup
+    for i in range(51, 50+25+1): #sup
         #plot_skip_batch(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv", csv_sup="LR=0.0001, Distance every batch sup.csv", lr=0.0001, loc="whole_plots/skip_batch")
         plot_batch_control(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
-                           csv_sup="LR=0.007, Control, Distance every batch sup, 2 epochs.csv", num_unsup_rows=50,
-                           num_sup_rows=32, lr=0.007,
-                           loc="whole_plots/blue-green/control/sup_2_epochs", is_sup="sup")
+                           csv_sup="LR=0.0001, Control, Distance every batch sup, 5 epochs.csv", num_unsup_rows=50,
+                           num_sup_rows=25, lr=0.007,
+                           loc="whole_plots/blue-green/control_slow/sup", is_sup="sup")
