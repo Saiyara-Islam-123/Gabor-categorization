@@ -84,7 +84,7 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5):
 
             weights_dir = "../net_weights/unsup"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), "../net_weights/unsup_4000/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
+            torch.save(model.state_dict(), "../net_weights/unsup/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
             print("unsup_net model weights saved as 'unsup_net_weights.pth'")
 
             batch += 1

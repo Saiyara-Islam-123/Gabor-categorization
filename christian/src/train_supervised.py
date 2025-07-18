@@ -4,11 +4,11 @@ import torch.optim as optim
 from dataset import load_gabor_data  # Importing the data loading function from dataset.py
 from Net import Net, SupervisedNet  # Import the autoencoder and supervised model from Net.py
 import matplotlib.pyplot as plt
-from IPython.display import clear_output
 import os
 import numpy as np
 from dist import *
 import pandas as pd
+import itertools
 
 def train_supervised(model, trainloader, device, lr, epochs=15):
     """
@@ -158,7 +158,7 @@ def train_supervised(model, trainloader, device, lr, epochs=15):
     np.save(accuracy_file_path, np.array(accuracy_values))  # Save as .npy file
     print(f"Accuracy values saved as NumPy array at: {accuracy_file_path}")
 
-def train_supervised_control(model, trainloader, device, lr, epochs=15):
+def train_supervised_control(model, main_trainloader, device, lr, epochs, side_train_loader, title, weights_dir, is_control):
     """
     Trains a given model using supervised learning with a provided dataloader, device,
     and a specified number of epochs. The function uses the CrossEntropyLoss for
@@ -189,24 +189,10 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
     results_dir = "../epoch_results_control"
     os.makedirs(results_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
 
-    # Initialize the plots for real-time visualization
-    #plt.ion()
-    #fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))  # Two subplots: 1 for Loss, 1 for Accuracy
-    #ax1.set_title("Supervised Training Loss")
-    #ax1.set_xlabel("Epoch")
-    #ax1.set_ylabel("Loss")
-    #ax2.set_title("Supervised Training Accuracy")
-    #ax2.set_xlabel("Epoch")
-    #ax2.set_ylabel("Accuracy (%)")
 
-    # Create plot lines for loss and accuracy
     loss_values = []
-    accuracy_values_control = []
-    accuracy_values_true = []
-    #loss_line, = ax1.plot([], [], label="Loss", color="blue")
-    #accuracy_line, = ax2.plot([], [], label="Accuracy", color="green")
-    #ax1.legend()
-    #ax2.legend()
+    accuracy_values_main = []
+    accuracy_values_side = []
 
     avg_distances = {}
     avg_distances[(0, 0)] = []
@@ -216,99 +202,75 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
 
     for epoch in range(epochs):
         running_loss = 0.0
-        correct_true = 0
-        correct_control = 0
-        total_true = 0
-        total_control = 0
+        correct_main = 0
+        correct_side = 0
+        total_main = 0
+        total_side = 0
         batch = 0
-        real_train_loader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
 
-        for images, labels in trainloader:
+        for images_main, labels_main in main_trainloader:
             # Prepare the images and labels
-            images = images.to(device)  # Move input images to the same device as the model
+            print(epoch, batch)
+            images_main = images_main.to(device)  # Move input images to the same device as the model
 
-            labels = labels.to(device)
+            labels_main = labels_main.to(device)
 
             # Zero the parameter gradients
             optimizer.zero_grad()
 
             # Forward pass
-            outputs = model(images)
-            loss_true = criterion(outputs, labels)
+            outputs = model(images_main)
+            loss_true = criterion(outputs, labels_main)
 
             # Backward pass and optimize
             loss_true.backward()
             optimizer.step()
 
             running_loss += loss_true.item()
+            print("Loss:", loss_true.item())
 
+            _, predicted_main = torch.max(outputs.data, 1)
+            total_main += labels_main.size(0)
+            correct_main += (predicted_main == labels_main).sum().item()
 
+            accuracy_main = 100 * correct_main / total_main
+            accuracy_values_main.append(accuracy_main)
+            print("Main: ", accuracy_main)
 
-            _, predicted_control = torch.max(outputs.data, 1)
-            total_control += labels.size(0)
-            correct_control += (predicted_control == labels).sum().item()
+            encoder_outputs_main = model.encoder_output
+            model.remove_encoder_output()
 
-            accuracy_control = 100 * correct_control / total_control
-            accuracy_values_control.append(accuracy_control)
-            print("Control: ", accuracy_control)
+            ###################################################################
 
-            for images_true, labels_true in real_train_loader:
-                outputs_2 = model(images_true)
+            images_side, labels_side = next(itertools.cycle(side_train_loader))
+            outputs_side = model(images_side)
 
-                encoder_outputs = model.encoder_output
+            _, predicted_side = torch.max(outputs_side.data, 1)
+            total_side += labels_side.size(0)
+            correct_side += (predicted_side == labels_side).sum().item()
 
-                zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
+            accuracy_true = 100 * correct_side / total_side
+            accuracy_values_side.append(accuracy_true)
+            print("Side: ",accuracy_true)
 
-                avg_distances[(0, 0)].append(zero)
-                avg_distances[(0, 1)].append(zero_one)
-                avg_distances[(1, 1)].append(one)
+            encoder_outputs_side = model.encoder_output
+            model.remove_encoder_output()
 
-                _, predicted_true = torch.max(outputs_2.data, 1)
-                total_true += labels_true.size(0)
-                correct_true += (predicted_true == labels_true).sum().item()
+            ####################################################################
+            if not is_control:
+                zero, zero_one, one = sampled_all_distance(encoder_outputs_main, labels_main)
+            else:
+                zero, zero_one, one = sampled_all_distance(encoder_outputs_side, labels_side)
 
-                accuracy_true = 100 * correct_true / total_true
-                accuracy_values_true.append(accuracy_true)
-                print("True: ",accuracy_true)
-                break
+            avg_distances[(0, 0)].append(zero)
+            avg_distances[(0, 1)].append(zero_one)
+            avg_distances[(1, 1)].append(one)
 
-            weights_dir = "../net_weights/sup_control"
-            os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), f"../net_weights/sup_control/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
+            torch.save(model.state_dict(), f"../net_weights/{weights_dir}/sup_net_weights_lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
             print("sup_net model weights saved as sup_net_weights.pth'")
             batch += 1
 
-        # Compute average loss and accuracy for the epoch
-        avg_loss = running_loss / len(trainloader)
-        loss_values.append(avg_loss)
 
-        print(f"Supervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f},")
-
-        # Update the real-time plots
-        #clear_output(wait=True)  # Clear output for smooth updates
-
-        # Update loss plot
-        #loss_line.set_xdata(range(1, len(loss_values) + 1))  # Update x values (epochs)
-        #loss_line.set_ydata(loss_values)  # Update y values (loss)
-        #ax1.relim()  # Recalculate axis limits
-        #ax1.autoscale_view()  # Autoscale the view to fit data
-
-        # Update accuracy plot
-        #accuracy_line.set_xdata(range(1, len(accuracy_values) + 1))  # Update x values (epochs)
-        #accuracy_line.set_ydata(accuracy_values)  # Update y values (accuracy)
-        #ax2.relim()  # Recalculate axis limits
-        #ax2.autoscale_view()  # Autoscale the view to fit data
-
-        #plt.pause(0.1)  # Pause to display the updated plot
-
-        # Save the trained model weights
-        # Save the trained model weights
-
-
-    # Keep the plots open after training
-    #plt.ioff()
-    #plt.close(fig)
-    # Save the loss values as a NumPy array
     loss_file_path = os.path.join(results_dir, "sup_epoch_losses.npy")
     np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
@@ -317,66 +279,18 @@ def train_supervised_control(model, trainloader, device, lr, epochs=15):
     df["within 0"] = avg_distances[(0, 0)]
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
-    df["acc true"] = accuracy_values_true
-    df["acc control_fast"] = accuracy_values_control
-    df.to_csv(f"LR={lr}, Control, Distance every batch sup, 5 epochs.csv", index=False)
 
+    if not is_control:
+        df["acc size"] = accuracy_values_side
+        df["acc freq"] = accuracy_values_main
 
-    accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
-    np.save(accuracy_file_path, np.array(accuracy_values_true))  # Save as .npy file
-    print(f"Accuracy values saved as NumPy array at: {accuracy_file_path}")
+    else:
+        df["acc freq"] = accuracy_values_side
+        df["acc size"] = accuracy_values_main
+
+    df.to_csv(f"LR={lr} {title} Distance every batch sup.csv", index=False)
 
 
 
 if __name__ == "__main__":
-    # Path to your Excel file
-    # Define the relative path
-
-    '''
-    excel_file = "categorisation 4000.xlsx"
-
-    # Load the data
-    trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=64)
-
-    # Initialize the net and load the lastest encoder weights
-    unsup_net = Net()
-
-    weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
-
-    unsup_net.load_state_dict(torch.load(weight_path))
-
-
-    # Initialize the supervised model using the encoder from the trained autoencoder
-    sup_net = SupervisedNet(unsup_net)
-
-    # Check if GPU is available and move the model to GPU if possible
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    sup_net.to(device)
-
-    # Train the supervised model
-    train_supervised(sup_net, trainloader, device, epochs=2, lr=0.005)
-    '''
-    #Train on control_fast blue green
-    excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
-
-    # Load the data
-    base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-    trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
-
-    # Initialize the net and load the lastest encoder weights
-    unsup_net = Net()
-
-    weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
-
-    unsup_net.load_state_dict(torch.load(weight_path))
-
-    # Initialize the supervised model using the encoder from the trained autoencoder
-    sup_net = SupervisedNet(unsup_net)
-
-    # Check if GPU is available and move the model to GPU if possible
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    sup_net.to(device)
-
-
-    # Train the supervised model
-    train_supervised_control(sup_net, trainloader, device, epochs=5, lr=0.007)
+    print()

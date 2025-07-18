@@ -115,6 +115,8 @@ class SupervisedNet(nn.Module):
         x = self.classifier(x)
         return x
 
+    def remove_encoder_output(self):
+        self.encoder_output = None
 
 if __name__ == "__main__":
     # Instantiate the autoencoder

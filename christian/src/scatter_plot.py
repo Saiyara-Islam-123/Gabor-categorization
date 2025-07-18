@@ -14,53 +14,12 @@ label_colors = {
     0: "green"
 
 }
-'''
-def change_mat_shape(standard_mat, num_rows_target):
-    print(standard_mat.shape)
-    if num_rows_target > standard_mat.shape[0]:
 
-        dif = num_rows_target - standard_mat.shape[0]
-        new_row = np.array([[0,0]])
-        for i in range(dif):
-            standard_mat = np.append(standard_mat, new_row, axis=0)
-    elif num_rows_target < standard_mat.shape[0]:
-
-        dif = standard_mat.shape[0] - num_rows_target
-        standard_mat = standard_mat[:standard_mat.shape[0]-dif, :]
-    print(standard_mat.shape, num_rows_target)
-    return standard_mat
-'''
 
 def of_two(matrix):
     tsne = TSNE(n_components=2, random_state=42)
     return tsne.fit_transform(matrix)
 
-
-def get_standard_dataset():
-    weights = "../net_weights/sup_4000/slow lr, 2 epochs/sup_net_weights_ lr=0.0001 1 49.pth"
-    unsup_net = Net()
-    unsup_weights_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
-    unsup_net.load_state_dict(torch.load(unsup_weights_path))
-
-    m = SupervisedNet(unsup_net)
-    m.load_state_dict(torch.load(weights))
-
-    m_outputs = []
-
-    excel_file = "categorisation 4000.xlsx"
-    dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
-
-    for images, labels in dataset:
-        _ = m(images)
-        encoder_outputs = m.encoder_output
-        m_outputs.append(encoder_outputs.detach().numpy())
-        ls=(labels.detach().numpy().tolist())
-        break
-
-    X_tnse = of_two(m_outputs[0])
-    df = pd.DataFrame(X_tnse)
-
-    df.to_csv("Standard Dataset", index=False)
 
 
 
@@ -68,7 +27,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch, loc):
 
     if train_type == "sup":
         unsup_net = Net()
-        unsup_weights_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
+        unsup_weights_path = "../net_weights/unsup/unsup_net_weights_ lr= 0.0001 0 49.pth"
         unsup_net.load_state_dict(torch.load(unsup_weights_path))
 
         m = SupervisedNet(unsup_net)
@@ -125,7 +84,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch, loc):
     plt.ylabel('Dimension 2')
 
     plt.legend()
-    plt.savefig(f"whole_plots/scatter_plots/{loc}/{train_type} lr = {lr}, {epoch} {batch}.png")
+    plt.savefig(f"{loc}/{train_type} lr = {lr}, {epoch} {batch}.png")
     plt.show()
 
 def plot_raw_data():
@@ -165,16 +124,16 @@ def plot_raw_data():
     plt.show()
 
 
-
+'''
 if __name__ == '__main__':
     #get_standard_dataset()
 
     #plot_raw_data()
-    '''
+   
     for i in range(50):
-        scatter_plot(train_type="unsup", weights=f"../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 {i}.pth", lr=0.0001, batch=i, epoch=0, loc="unsup, every batch")
+        scatter_plot(train_type="unsup", weights=f"../net_weights/unsup/unsup_net_weights_ lr= 0.0001 0 {i}.pth", lr=0.0001, batch=i, epoch=0, loc="unsup, every batch")
 
-    ''' 
+     
 
     for i in range(5):
         for j in range(5):
@@ -184,3 +143,4 @@ if __name__ == '__main__':
             c = j
             print(e, c)
             scatter_plot(train_type="sup", weights=w, lr=0.0001, batch=c, epoch=e, loc="sup_control_slow")
+'''

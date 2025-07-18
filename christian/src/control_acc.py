@@ -13,7 +13,7 @@ def control_acc(dir):
     trainloader, _, _ = load_gabor_data(excel_file, batch_size=180, base_dir=base_dir, split=0.9)
     unsup_net = Net()
 
-    weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 0 49.pth"
+    weight_path = "../net_weights/unsup/unsup_net_weights_ lr= 0.0001 0 49.pth"
     unsup_net.load_state_dict(torch.load(weight_path))
 
     accuracy_values = []
