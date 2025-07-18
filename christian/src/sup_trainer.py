@@ -5,7 +5,7 @@ from train_supervised import *
 class ParentTrainer:
     def __init__(self):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.epochs = 1
+        self.epochs = 10
 
 
     def train(self):
@@ -63,7 +63,6 @@ class Fast_lr_Size_Trainer(ParentTrainer):
         self.side_trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
         excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
         base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-
         self.main_trainloader, _, _ = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
         self.lr = 0.005
         self.title = "Fast_lr_Size"
@@ -71,5 +70,5 @@ class Fast_lr_Size_Trainer(ParentTrainer):
         self.is_control = True
 
 if __name__ == "__main__":
-    slow_freq_trainer = Slow_lr_Freq_Trainer()
-    slow_freq_trainer.train()
+    fast_size_trainer = Fast_lr_Size_Trainer()
+    fast_size_trainer.train()
