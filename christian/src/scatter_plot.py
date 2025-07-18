@@ -9,11 +9,17 @@ import re
 from scipy.spatial import procrustes
 import pandas as pd
 
-label_colors = {
+label_colors_freq = {
     1: "limegreen",
     0: "green"
 
 }
+label_colors_size = {
+    1 : "lightsteelblue",
+    0: "slategrey"
+
+}
+
 
 
 def of_two(matrix):
@@ -21,9 +27,7 @@ def of_two(matrix):
     return tsne.fit_transform(matrix)
 
 
-
-
-def scatter_plot(train_type, weights, lr, batch, epoch, loc):
+def scatter_plot(train_type, weights, lr, batch, epoch, loc, excel_file, base_dir="Default"):
 
     if train_type == "sup":
         unsup_net = Net()
@@ -38,9 +42,13 @@ def scatter_plot(train_type, weights, lr, batch, epoch, loc):
         m.load_state_dict(torch.load(weights))
 
     m_outputs = []
+    if base_dir != "Default":
+        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
 
-    excel_file = "categorisation 4000.xlsx"
-    dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
+        dataset, _, _ = load_gabor_data(excel_file, batch_size=400, base_dir=base_dir)
+
+    else:
+        dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
 
     for images, labels in dataset:
 
@@ -57,7 +65,7 @@ def scatter_plot(train_type, weights, lr, batch, epoch, loc):
             labels_arr=(labels.detach().numpy())
         break
 
-    #standard_dataset = pd.read_csv("Standard Dataset").to_numpy()
+
 
 
     X_tnse = of_two(m_outputs[0])
@@ -71,12 +79,22 @@ def scatter_plot(train_type, weights, lr, batch, epoch, loc):
         x_axis = pc1[i]
         y_axis = pc2[i]
 
-        color = label_colors[labels_arr[i]]
+        if base_dir == "Default":
+
+            color = label_colors_freq[labels_arr[i]]
+
+        else:
+            color = label_colors_size[labels_arr[i]]
 
         plt.scatter(x_axis, y_axis, color=color, s=10)
 
-    plt.scatter([], [], color= "limegreen", label ="Cat1" )
-    plt.scatter([], [], color= "green", label='Cat2')
+    if base_dir == "Default":
+        plt.scatter([], [], color= "limegreen", label ="Cat1" )
+        plt.scatter([], [], color= "green", label='Cat0')
+    else:
+        plt.scatter([], [], color="lightsteelblue", label="Cat1")
+        plt.scatter([], [], color="slategrey", label='Cat0')
+
 
 
     plt.title( train_type +f"ervised training scatterplot, Epoch: {epoch} Batch: {batch}" )
@@ -87,9 +105,15 @@ def scatter_plot(train_type, weights, lr, batch, epoch, loc):
     plt.savefig(f"{loc}/{train_type} lr = {lr}, {epoch} {batch}.png")
     plt.show()
 
-def plot_raw_data():
-    excel_file = "categorisation 4000.xlsx"
-    dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
+def plot_raw_data(default):
+    if default:
+        excel_file = "categorisation 4000.xlsx"
+        dataset, _, _ = load_gabor_data(excel_file, batch_size=500)
+
+    else:
+        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
+        excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
+        dataset, _, _ = load_gabor_data(excel_file, batch_size=400, base_dir=base_dir)
 
     im = []
 
@@ -99,29 +123,50 @@ def plot_raw_data():
         break
 
     print(im[0].shape)
-    X_tnse = of_two(im[0].reshape(500, 128*128*3))
+    if default:
+        X_tnse = of_two(im[0].reshape(500, 128*128*3))
+
+    else:
+        X_tnse = of_two(im[0].reshape(160, 128*128*3))
+
     pc1 = X_tnse[:, 0]
     pc2 = X_tnse[:, 1]
+
 
     for i in range(len(labels_arr)):
         x_axis = pc1[i]
         y_axis = pc2[i]
 
-        color = label_colors[labels_arr[i]]
+        if default:
+            color = label_colors_freq[labels_arr[i]]
+        else:
+            color = label_colors_size[labels_arr[i]]
 
         plt.scatter(x_axis, y_axis, color=color, s=10)
 
-    plt.scatter([], [], color= "limegreen", label ="Cat1" )
-    plt.scatter([], [], color= "green", label='Cat2')
 
+    if default:
+        plt.scatter([], [], color= "limegreen", label ="Cat1" )
+        plt.scatter([], [], color= "green", label='Cat0')
+
+    else:
+        plt.scatter([], [], color="lightsteelblue", label="Cat1")
+        plt.scatter([], [], color="slategrey", label='Cat0')
 
     plt.title( "No training scatterplot" )
     plt.xlabel('Dimension 1')
     plt.ylabel('Dimension 2')
 
     plt.legend()
-    plt.savefig("whole_plots/scatter_plots/no_train/no_training.png")
+    if default:
+        plt.savefig("../whole_plots/scatter_plots_freq/no_train/no_training.png")
+
+    else:
+        plt.savefig("../whole_plots/scatter_plots_size/no_train/no_training.png")
     plt.show()
+
+if __name__ == "__main__":
+    plot_raw_data(default=False)
 
 
 '''

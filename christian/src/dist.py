@@ -44,18 +44,17 @@ def sampled_all_distance(X,y):
 
 if __name__== '__main__':
 
+    excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
+    base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
 
-
-    '''
-    excel_file = "categorisation 4000.xlsx"
-    trainloader, _, _ = load_gabor_data(excel_file, batch_size=64)
+    train_loader, _, _ = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
     avg_distances = {}
     avg_distances[(0, 0)] = []
     avg_distances[(0, 1)] = []
     avg_distances[(1, 1)] = []
     df = pd.DataFrame()
 
-    for images, labels in trainloader:
+    for images, labels in train_loader:
         zero, zero_one, one = (sampled_all_distance(X=images, y=labels))
         avg_distances[(0, 0)].append(zero)
         avg_distances[(0, 1)].append(zero_one)
@@ -65,6 +64,5 @@ if __name__== '__main__':
     df["within 0"] = avg_distances[(0, 0)]
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
-    df.to_csv("Distance no train.csv", index=False)
+    df.to_csv("Size Distance no train.csv", index=False)
     
-    '''
