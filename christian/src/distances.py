@@ -5,18 +5,34 @@ from dataset import load_gabor_data
 from Net import Net, SupervisedNet
 
 
-def cosine_distance_matrix(embeddings):
+def cosine_distance_matrix(embeddings1, embeddings2=None):
     """
-    Compute the pairwise cosine distance matrix for a batch of embeddings.
-    Returns: Upper triangular cosine distance matrix (1 - cosine similarity).
+    Compute the pairwise cosine distance matrix.
+    - If `embeddings2` is None, computes distances within `embeddings1`.
+    - If `embeddings2` is provided, computes distances between `embeddings1` and `embeddings2`.
+
+    Args:
+        embeddings1 (torch.Tensor): The first set of embeddings.
+        embeddings2 (torch.Tensor, optional): The second set of embeddings. Defaults to None.
+
+    Returns:
+        torch.Tensor: The cosine distance matrix.
     """
-    normalized = embeddings / torch.norm(embeddings, p=2, dim=1, keepdim=True)  # Normalize to unit vectors
-    cosine_similarity = torch.matmul(normalized, normalized.T)  # Cosine similarity
+    normalized1 = embeddings1 / torch.norm(embeddings1, p=2, dim=1, keepdim=True)  # Normalize to unit vectors
+    if embeddings2 is None:
+        # Case: Within-tensor distances
+        cosine_similarity = torch.matmul(normalized1, normalized1.T)  # Cosine similarity
+    else:
+        # Case: Between-tensor distances
+        normalized2 = embeddings2 / torch.norm(embeddings2, p=2, dim=1, keepdim=True)
+        cosine_similarity = torch.matmul(normalized1, normalized2.T)  # Cosine similarity
+
     cosine_distance = 1 - cosine_similarity  # Convert similarity to distance
-    return cosine_distance.triu(diagonal=1)  # Upper triangular matrix excluding diagonal
+    return cosine_distance
+  
 
 
-def process_activations(activations, labels):
+def compute_distances(activations, labels):
     """
     Processes activations and labels to calculate the mean within-category and between-category
     distances.
@@ -41,6 +57,9 @@ def process_activations(activations, labels):
 
     within_distances = []
     between_distances = []
+    within_distances_cat0 = []
+    within_distances_cat1 = []
+
 
     category_dict = {}
     for i, label in enumerate(labels):
@@ -50,16 +69,22 @@ def process_activations(activations, labels):
 
     for category, members in category_dict.items():
         members_tensor = torch.tensor(members)
-        within_dist = cosine_distance_matrix(members_tensor).mean().item()  # Within-category distance
+        within_dist = torch.triu(cosine_distance_matrix(members_tensor),
+                                 diagonal=1).mean().item()  # Within-category distance
+        if category == 0:
+            within_distances_cat0.append(within_dist)
+        else:
+            within_distances_cat1.append(within_dist)
+
         within_distances.append(within_dist)
 
         for other_category, other_members in category_dict.items():
             if category != other_category:
                 other_members_tensor = torch.tensor(other_members)
-                between_dist = torch.cdist(members_tensor, other_members_tensor).mean().item()
+                between_dist = cosine_distance_matrix(members_tensor, other_members_tensor).mean().item()
                 between_distances.append(between_dist)
 
-    return np.mean(within_distances), np.mean(between_distances)
+    return np.mean(within_distances_cat0),np.mean(within_distances_cat1),np.mean(within_distances), np.mean(between_distances)
 
 
 def evaluate_and_save_epochs(model, trainloader, device, weight_dir, num_epochs, save_prefix):
@@ -89,6 +114,8 @@ def evaluate_and_save_epochs(model, trainloader, device, weight_dir, num_epochs,
     os.makedirs(results_dir, exist_ok=True)
 
     # Lists to store distances for all epochs
+    within_distances_all_cat0 = []
+    within_distances_all_cat1 = []
     within_distances_all = []
     between_distances_all = []
 
@@ -112,6 +139,9 @@ def evaluate_and_save_epochs(model, trainloader, device, weight_dir, num_epochs,
         # Register forward hook on the last encoder layer
         hook_handle = model.encoder[-1].register_forward_hook(hook_fn)
 
+        within_distances_cat0 = []
+        within_distances_cat1 = []
+
         within_distances = []
         between_distances = []
 
@@ -120,22 +150,27 @@ def evaluate_and_save_epochs(model, trainloader, device, weight_dir, num_epochs,
             for images, labels in trainloader:
                 images, labels = images.to(device), labels.to(device)
                 _ = model(images)  # Forward pass
-
                 activations = activation_holder.pop()  # Get the activations
-                within_avg, between_avg = process_activations(activations, labels)
+                within_avg_cat0,within_avg_cat1, within_avg, between_avg = compute_distances(activations, labels)
 
+                within_distances_cat0.append(within_avg_cat0)
+                within_distances_cat1.append(within_avg_cat1)
                 within_distances.append(within_avg)
                 between_distances.append(between_avg)
 
         hook_handle.remove()  # Remove the hook after processing
 
         # Compute per-epoch averages
+        epoch_within_avg_cat0 = np.mean(within_distances_cat0)
+        epoch_within_avg_cat1 = np.mean(within_distances_cat1)
         epoch_within_avg = np.mean(within_distances)
         epoch_between_avg = np.mean(between_distances)
 
         print(f"Epoch {epoch + 1}: Within Avg: {epoch_within_avg:.4f}, Between Avg: {epoch_between_avg:.4f}")
 
         # Append to global lists
+        within_distances_all_cat0.append(epoch_within_avg_cat0)
+        within_distances_all_cat1.append(epoch_within_avg_cat1)
         within_distances_all.append(epoch_within_avg)
         between_distances_all.append(epoch_between_avg)
 
@@ -145,6 +180,12 @@ def evaluate_and_save_epochs(model, trainloader, device, weight_dir, num_epochs,
     between_file = os.path.join(results_dir, f"{save_prefix}_between_distances.npy")
     np.save(within_file, np.array(within_distances_all))
     np.save(between_file, np.array(between_distances_all))
+
+    # Save individual category within distances
+    within_file_cat1 = os.path.join(results_dir, f"{save_prefix}_within_distances_cat0.npy")
+    within_file_cat2 = os.path.join(results_dir, f"{save_prefix}_within_distances_cat1.npy")
+    np.save(within_file_cat1, np.array(within_distances_all_cat0))
+    np.save(within_file_cat2, np.array(within_distances_all_cat1))
 
     print(f"Saved within-category distances to: {within_file}")
     print(f"Saved between-category distances to: {between_file}")
@@ -156,11 +197,11 @@ if __name__ == "__main__":
     sup_weight_dir = os.path.abspath("../net_weights/sup")
 
     # Number of epochs
-    num_unsup_epochs = 20
-    num_sup_epochs = 20
+    num_unsup_epochs = 15
+    num_sup_epochs = 15
 
     # Load data
-    excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation.xlsx")
+    excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation_with_control.xlsx")
     trainloader, _, _ = load_gabor_data(excel_file, batch_size=64)
 
 

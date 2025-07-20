@@ -50,7 +50,6 @@ class GaborDataset(Dataset):
 
         # Convert the label to a tensor (if it's categorical, convert it to an integer first)
         label = torch.tensor(0 if label == 'k' else 1)  # Assuming 'k' -> 0, 'l' -> 1
-
         return image, label
 
 
@@ -65,6 +64,7 @@ def load_gabor_data(excel_file, batch_size=64):
     # Load the dataset
     dataset = GaborDataset(excel_file, transform=transform)
 
+    torch.manual_seed(42)  # Ensure consistent dataset splitting
     # Split the dataset into training (80%), validation (10%), and test (10%)
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
@@ -94,10 +94,11 @@ def plot_images(images, labels):
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation.xlsx")
+    excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation_with_control.xlsx")
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file)
+
 
     # Get a batch of images and labels from the training set
     dataiter = iter(trainloader)

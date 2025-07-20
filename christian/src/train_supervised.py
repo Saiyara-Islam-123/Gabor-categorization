@@ -31,7 +31,7 @@ def train_supervised(model, trainloader, device, epochs=15):
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
 
     model.train()
 

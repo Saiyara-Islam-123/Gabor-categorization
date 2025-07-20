@@ -1,6 +1,9 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+
+matplotlib.use("TkAgg")  # Replace with a backend that supports interactivity
 
 
 def plot_distances_and_losses(num_unsup_epochs, num_sup_epochs, results_dir="../epochs_results"):
@@ -116,7 +119,7 @@ def plot_distances_and_losses(num_unsup_epochs, num_sup_epochs, results_dir="../
 
 
 if __name__ == "__main__":
-    num_unsup_epochs = 20
-    num_sup_epochs = 20
+    num_unsup_epochs = 30
+    num_sup_epochs = 30
 
     plot_distances_and_losses(num_unsup_epochs, num_sup_epochs)

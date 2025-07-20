@@ -29,7 +29,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
     # Define the loss function specific for autoencoder
     criterion = nn.MSELoss()  # Mean Squared Error loss for reconstruction
     # Define optimizer
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
 
     model.train()
     loss_values = []
@@ -58,8 +58,7 @@ def train_unsupervised(model, trainloader, device, epochs=5):
             # Forward pass
             outputs = model(images)
             loss = criterion(outputs, images)
-
-            # Backward pass and optimize
+        # Backward pass and optimize
             loss.backward()
             optimizer.step()
 
