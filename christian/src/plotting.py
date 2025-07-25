@@ -101,8 +101,13 @@ def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, 
 
     plt.show()
 
-def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc, is_sup, is_control):
-    df_no_train = pd.read_csv("Distance no train.csv")
+def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc, is_sup, is_control=False, by_size = False): #is control -> trained on size, by_size -> dist labelled by size
+    if not by_size:
+
+        df_no_train = pd.read_csv("Distance no train.csv")
+
+    else:
+        df_no_train = pd.read_csv("Size Distance no train.csv")
 
     df_unsup = pd.read_csv(csv_unsup)
     df_unsup = df_unsup.tail(num_unsup_rows)
@@ -111,10 +116,12 @@ def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_ro
     df_sup = pd.read_csv(csv_sup)
     df_sup = df_sup.head(num_sup_rows)
 
-
-    accs_side = df_sup["acc side"]
-    accs_main = df_sup["acc main"]
-
+    if is_control:
+        accs_side = df_sup["acc freq"]
+        accs_main = df_sup["acc size"]
+    else:
+        accs_main = df_sup["acc freq"]
+        accs_side = df_sup["acc size"]
 
 
     df_whole = pd.concat([df_no_train, df_unsup , df_sup])
@@ -126,9 +133,16 @@ def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_ro
         x2.append(k)
 
     fig, ax1 = plt.subplots()
-    ax1.plot(x, df_whole['within 1'], color="limegreen", label="within Cat1")
-    ax1.plot(x, df_whole['within 0'], color="green", label="within Cat0")
-    ax1.plot(x, df_whole['between'], color="blue", label="between")
+    if by_size == False:
+        ax1.plot(x, df_whole['within 1'], color="limegreen", label="within Cat1")
+        ax1.plot(x, df_whole['within 0'], color="green", label="within Cat0")
+        ax1.plot(x, df_whole['between'], color="blue", label="between")
+    else:
+        ax1.plot(x, df_whole['within 1'], color="lightsteelblue", label="within Cat1")
+        ax1.plot(x, df_whole['within 0'], color="slategrey", label="within Cat0")
+        ax1.plot(x, df_whole['between'], color="navy", label="between")
+
+
     ax1.axvline(x=num_unsup_rows, color='r', linestyle='--')
     ax1.axvline(x=1, color='r', linestyle='--')
     ax1.set_ylabel('Distance')

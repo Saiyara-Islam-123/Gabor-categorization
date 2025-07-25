@@ -70,5 +70,5 @@ class Fast_lr_Size_Trainer(ParentTrainer):
         self.is_control = True
 
 if __name__ == "__main__":
-    fast_size_trainer = Fast_lr_Size_Trainer()
+    fast_size_trainer = Slow_lr_Size_Trainer()
     fast_size_trainer.train()

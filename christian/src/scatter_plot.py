@@ -159,7 +159,7 @@ def plot_raw_data(default):
 
     plt.legend()
     if default:
-        plt.savefig("../whole_plots/scatter_plots_freq/no_train/no_training.png")
+        plt.savefig("../whole_plots/scatter_plots_by_freq/no_train/no_training.png")
 
     else:
         plt.savefig("../whole_plots/scatter_plots_size/no_train/no_training.png")
