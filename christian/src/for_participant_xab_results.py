@@ -29,7 +29,7 @@ def clean_file():
 def get_distances(weights_path, is_sup):
     if is_sup:
         unsup_model = Net()
-        unsup_model.load_state_dict(torch.load("../net_weights/unsup/unsup_net_weights_ lr= 0.0001 0 49.pth"))
+        unsup_model.load_state_dict(torch.load("../net_weights/unsup_400/unsup_net_weights_ lr= 0.0001 4 4.pth"))
 
         sup_model = SupervisedNet(unsup_model)
         sup_model.load_state_dict(torch.load(weights_path))
@@ -82,31 +82,36 @@ def get_distances(weights_path, is_sup):
 
     return np.mean(np.array(d["between"])), np.mean(np.array(d["within_0"])), np.mean(np.array(d["within_1"]))
 
-def dists(type_of_sup_training):
+def dists(sup_dir):
     d = {"between": [],
          "within_0": [],
          "within_1": []
          }
-    for i in range(150):
-        if i < 50:
-            weights_path = f"../net_weights/unsup/unsup_net_weights_ lr= 0.0001 0 {i}.pth"
+    for i in range(5):
+        for j in range(5):
+            weights_path = f"../net_weights/unsup_400/unsup_net_weights_ lr= 0.0001 {i} {j}.pth"
             b, w0, w1 = get_distances(weights_path=weights_path, is_sup=False)
-        else:
-            weights_path = f"../net_weights/{type_of_sup_training}/sup_net_weights_lr=0.0001 0 {i-50}.pth"
+            d["between"].append(b)
+            d["within_0"].append(w0)
+            d["within_1"].append(w1)
+
+    for i in range(5):
+        for j in range(5):
+            weights_path = f"../net_weights/sup_400/sup_net_weights_ lr=0.0001 {i} {j}.pth"
             b, w0, w1 = get_distances(weights_path=weights_path, is_sup=True)
 
-        d["between"].append(b)
-        d["within_0"].append(w0)
-        d["within_1"].append(w1)
+            d["between"].append(b)
+            d["within_0"].append(w0)
+            d["within_1"].append(w1)
 
     df = pd.DataFrame(d)
 
-    df.to_csv(f"xab_{type_of_sup_training}_dists.csv", index=False)
+    df.to_csv(f"xab_{sup_dir}_dists.csv", index=False)
 
 def plot():
-    df = pd.read_csv("xab_slow_lr_freq_dists.csv")
+    df = pd.read_csv("xab_sup_400_dists.csv")
     x = []
-    for i in range(150):
+    for i in range(50):
         x.append(i)
 
 
@@ -114,12 +119,12 @@ def plot():
     plt.plot(x, df['within_0'], color="green", label="within Cat0")
     plt.plot(x, df['between'], color="blue", label="between")
 
-    plt.axvline(x=49, color='r', linestyle='--')
+    plt.axvline(x=24, color='r', linestyle='--')
     plt.xlabel("Epoch")
     plt.ylabel('Distance')
     plt.title("Gabor categorization distances across training batches")
     plt.show()
 
 if __name__ == "__main__":
-    #dists(type_of_sup_training="fast_lr_freq")
+    #dists(sup_dir="sup_400")
     plot()

@@ -84,7 +84,7 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5):
 
             weights_dir = "../net_weights/unsup"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), "../net_weights/unsup/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
+            torch.save(model.state_dict(), "../net_weights/unsup_400/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
             print("unsup_net model weights saved as 'unsup_net_weights.pth'")
 
             batch += 1
@@ -121,7 +121,7 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5):
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = "categorisation 4000.xlsx"
+    excel_file = "categorisation.xlsx"
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file,batch_size=64)
@@ -133,4 +133,4 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader, device, lr=0.0001, epochs=1)
+    train_unsupervised(unsup_net, trainloader, device, lr=0.0001, epochs=5)

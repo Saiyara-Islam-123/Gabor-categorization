@@ -53,18 +53,18 @@ def train_supervised(model, trainloader, device, lr, epochs=15):
 
     # Create plot lines for loss and accuracy
     loss_values = []
-    accuracy_values = []
+    #accuracy_values = []
     #loss_line, = ax1.plot([], [], label="Loss", color="blue")
     #accuracy_line, = ax2.plot([], [], label="Accuracy", color="green")
     #ax1.legend()
     #ax2.legend()
-
+    '''
     avg_distances = {}
     avg_distances[(0, 0)] = []
     avg_distances[(0, 1)] = []
     avg_distances[(1, 1)] = []
 
-
+    '''
     for epoch in range(epochs):
         running_loss = 0.0
         correct = 0
@@ -90,24 +90,24 @@ def train_supervised(model, trainloader, device, lr, epochs=15):
 
             running_loss += loss.item()
 
-            encoder_outputs = model.encoder_output
-            zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
+            #encoder_outputs = model.encoder_output
+            #zero, zero_one, one = sampled_all_distance(encoder_outputs, labels)
 
-            avg_distances[(0, 0)].append(zero)
-            avg_distances[(0, 1)].append(zero_one)
-            avg_distances[(1, 1)].append(one)
+            #avg_distances[(0, 0)].append(zero)
+            #avg_distances[(0, 1)].append(zero_one)
+            #avg_distances[(1, 1)].append(one)
 
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
             accuracy = 100 * correct / total
-            accuracy_values.append(accuracy)
+            #accuracy_values.append(accuracy)
             print(accuracy)
 
-            weights_dir = "../net_weights/sup"
-            os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), f"../net_weights/sup/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
+            #weights_dir = "../net_weights/sup"
+            #os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
+            torch.save(model.state_dict(), f"../net_weights/sup_400/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
             print("sup_net model weights saved as sup_net_weights.pth'")
             batch += 1
 
@@ -146,16 +146,16 @@ def train_supervised(model, trainloader, device, lr, epochs=15):
     np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 
-    df = pd.DataFrame()
-    df["within 0"] = avg_distances[(0, 0)]
-    df["within 1"] = avg_distances[(1, 1)]
-    df["between"] = avg_distances[(0, 1)]
-    df["acc"] = accuracy_values
-    df.to_csv(f"LR={lr}, Distance every batch sup, 2 epochs.csv", index=False)
+    #df = pd.DataFrame()
+    #df["within 0"] = avg_distances[(0, 0)]
+    #df["within 1"] = avg_distances[(1, 1)]
+    #df["between"] = avg_distances[(0, 1)]
+    #df["acc"] = accuracy_values
+    #df.to_csv(f"LR={lr}, Distance every batch sup, 2 epochs.csv", index=False)
 
 
     accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
-    np.save(accuracy_file_path, np.array(accuracy_values))  # Save as .npy file
+    #np.save(accuracy_file_path, np.array(accuracy_values))  # Save as .npy file
     print(f"Accuracy values saved as NumPy array at: {accuracy_file_path}")
 
 def train_supervised_control(model, main_trainloader, device, lr, epochs, side_train_loader, title, weights_dir, is_control):

@@ -67,7 +67,7 @@ def load_whole_dataset(excel_file):
 
 
 # Data loader function
-def load_gabor_data(excel_file, batch_size=64, base_dir ="C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\" ):
+def load_gabor_data(excel_file, batch_size=64, base_dir ="../../GABORS_400/gabors_1/" ):
     # Define a transform to preprocess the images
     transform = transforms.Compose([
         transforms.Resize((128, 128)),  # Resize images to 128x128
