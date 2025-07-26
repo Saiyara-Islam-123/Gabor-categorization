@@ -7,7 +7,19 @@ from Net import Net
 
 def load_latest_weights(model, weights_dir):
     """
-    Load the latest weights from the directory. Assumes files are named with epoch numbers, e.g., `unsup_net_weights_epoch_15.pth`.
+    Loads the latest weights for the given model from the specified directory. The
+    function looks for weight files following a naming pattern 'unsup_net_weights_<epoch>.pth',
+    where <epoch> is an integer representing the epoch number. It sorts these files
+    by their epoch numbers and loads the latest one into the model.
+
+    :param model: The PyTorch model instance whose weights are to be loaded.
+    :type model: torch.nn.Module
+    :param weights_dir: The directory path where the weight files are stored.
+    :type weights_dir: str
+    :return: None
+    :rtype: None
+    :raises FileNotFoundError: If the weights directory does not exist or if no
+        valid weight files are found in the directory.
     """
     if not os.path.exists(weights_dir):
         raise FileNotFoundError(f"Weights directory '{weights_dir}' does not exist.")

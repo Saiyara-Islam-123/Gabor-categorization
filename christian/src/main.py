@@ -8,6 +8,9 @@ from train_unsupervised import train_unsupervised
 from train_supervised import train_supervised
 import os
 import numpy as np
+import matplotlib
+
+matplotlib.use("TkAgg")  # Replace with a backend that supports interactivity
 
 if __name__ == "__main__":
 
@@ -26,7 +29,7 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Train the unsupervised model
-    train_unsupervised(unsup_net, trainloader, device, epochs=20)
+    train_unsupervised(unsup_net, trainloader, device, epochs=15)
 
     # Load the last available weights based on the count
     # Path to the weights folder
@@ -44,4 +47,4 @@ if __name__ == "__main__":
     # # Initialize the supervised model using the encoder from the trained autoencoder
     sup_net = SupervisedNet(unsup_net)
     sup_net.to(device)
-    train_supervised(sup_net, trainloader, device, epochs=20)
+    train_supervised(sup_net, trainloader, device, epochs=15)
