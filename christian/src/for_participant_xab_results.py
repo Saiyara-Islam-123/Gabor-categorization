@@ -76,8 +76,9 @@ def get_distances(weights_path, is_sup):
         mat_A_flattened_normalized = torch.nn.functional.normalize(mat_A_flattened, p=2, dim=1)
         mat_B_flattened_normalized = torch.nn.functional.normalize(mat_B_flattened, p=2, dim=1)
 
-
-        d[type].append(torch.norm(mat_A_flattened_normalized - mat_B_flattened_normalized).item())
+        dist = torch.norm(mat_A_flattened_normalized - mat_B_flattened_normalized).item()
+        d[type].append(dist)
+        print(type, dist)
 
 
     return np.mean(np.array(d["between"])), np.mean(np.array(d["within_0"])), np.mean(np.array(d["within_1"]))
@@ -126,5 +127,4 @@ def plot():
     plt.show()
 
 if __name__ == "__main__":
-    #dists(sup_dir="sup_400")
-    plot()
+    get_distances(weights_path="../net_weights/sup_400/sup_net_weights_ lr=0.0001 4 4.pth", is_sup=True)
