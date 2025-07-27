@@ -18,8 +18,8 @@ def create_non_xab_pairs():
 
         [imA, _] = os.listdir(f"..\..\GABORS_400\gabors_1\experimentFiles\gabors\\testing\pair{index_for_A}")
         [_, imB] = os.listdir(f"..\..\GABORS_400\gabors_1\experimentFiles\gabors\\testing\pair{index_for_B}")
-        A.append(f"..\..\GABORS_400\gabors_1\experimentFiles\gabors\\testing\pair{index_for_A}"+imA)
-        B.append(f"..\..\GABORS_400\gabors_1\experimentFiles\gabors\\testing\pair{index_for_B}"+imB)
+        A.append(f"..\..\GABORS_400\gabors_1\experimentFiles\gabors\\testing\pair{index_for_A}\\"+imA)
+        B.append(f"..\..\GABORS_400\gabors_1\experimentFiles\gabors\\testing\pair{index_for_B}\\"+imB)
 
         if ("cat_0" in imA and "cat_1" in imB) or ("cat_1" in imA and "cat_0" in imB):
             types.append("between")
@@ -35,7 +35,7 @@ def create_non_xab_pairs():
     df.to_csv("non_xab_pairs")
 
 if __name__ == "__main__":
-    create_non_xab_pairs()
+    #create_non_xab_pairs()
     df = pd.read_csv("non_xab_pairs")
     category_counts = df['type'].value_counts()
     print(category_counts)

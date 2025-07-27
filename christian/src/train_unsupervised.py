@@ -10,7 +10,7 @@ import numpy as np
 from dist import *
 import pandas as pd
 
-def train_unsupervised(model, trainloader, device, lr, epochs=5):
+def train_unsupervised(model, trainloader, device, lr, epochs=5, dist_func = sampled_all_distance):
     """
     Trains an unsupervised model (e.g., autoencoder) using a specified dataset and parameters.
     This function uses Mean Squared Error (MSE) loss for reconstruction and updates the model's
@@ -73,7 +73,7 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5):
 
             running_loss += loss.item()
 
-            zero, zero_one, one = sampled_all_distance(model.encoded, labels)
+            zero, zero_one, one = dist_func(model.encoded, labels)
 
             avg_distances[(0, 0)].append(zero)
             avg_distances[(0, 1)].append(zero_one)
@@ -84,12 +84,13 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5):
 
             weights_dir = "../net_weights/unsup"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), "../net_weights/unsup_400/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
-            print("unsup_net model weights saved as 'unsup_net_weights.pth'")
+            torch.save(model.state_dict(), "../net_weights/unsup_xab_dataset/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
+
 
             batch += 1
 
-        print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
+            print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
+            print(zero, zero_one, one)
 
         # Update the real-time plot
         #clear_output(wait=True)  # Clear the previous output
@@ -113,7 +114,7 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5):
     df["within 0"] = avg_distances[(0,0)]
     df["within 1"] = avg_distances[(1,1)]
     df["between"] = avg_distances[(0,1)]
-    df.to_csv(f"LR={lr}, Distance every batch unsup.csv", index=False)
+    df.to_csv(f"LR={lr}, XAB Distance every batch unsup.csv", index=False)
 
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
 
@@ -121,7 +122,7 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5):
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = "categorisation.xlsx"
+    excel_file = "categorisation_xab.xlsx"
 
     # Load the data
     trainloader, valloader, testloader = load_gabor_data(excel_file,batch_size=64)
@@ -133,4 +134,4 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader, device, lr=0.0001, epochs=5)
+    train_unsupervised(unsup_net, trainloader, device, lr=0.0001, epochs=5, dist_func=xab_pairs_dist)

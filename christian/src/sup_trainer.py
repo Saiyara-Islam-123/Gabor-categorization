@@ -87,6 +87,25 @@ class Fast_lr_Size_Trainer(ParentTrainer):
         self.weights_dir = "fast_lr_size"
         self.is_control = True
 
+class XABTrainer(ParentTrainer):
+    def __init__(self):
+        super().__init__()
+        self.main_trainloader, _, _ = load_gabor_data("categorisation_xab.xlsx", batch_size=64)
+        self.lr = 0.0001
+        self.title = "Slow_lr_Freq_400"
+        self.weights_dir = "slow_lr_freq_400"
+        self.is_control = False
+
+    def train(self):
+        unsup_net = Net()
+
+        weight_path = "../net_weights/unsup_xab_dataset/unsup_net_weights_ lr= 0.0001 4 6.pth"
+        unsup_net.load_state_dict(torch.load(weight_path))
+        sup_net = SupervisedNet(unsup_net)
+
+        train_supervised(model=sup_net, trainloader=self.main_trainloader, device=self.device, lr=self.lr, epochs=5, dist_func=xab_pairs_dist)
+
+
 if __name__ == "__main__":
-    trainer = Slow_lr_Freq_Trainer_400()
+    trainer = XABTrainer()
     trainer.train()

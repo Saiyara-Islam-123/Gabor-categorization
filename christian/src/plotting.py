@@ -54,7 +54,7 @@ def plot_skip_batch(time_step, csv_unsup, csv_sup, lr, loc):
     plt.show()
 
 def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc, is_sup):
-    df_no_train = pd.read_csv("Distance no train.csv")
+    #df_no_train = pd.read_csv("Distance no train.csv")
 
     df_unsup = pd.read_csv(csv_unsup)
     df_unsup = df_unsup.tail(num_unsup_rows)
@@ -67,20 +67,19 @@ def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, 
     accs = df_sup["acc"]
     df_sup.drop(columns=["acc"], inplace=True)
 
-    df_whole = pd.concat([df_no_train, df_unsup , df_sup])
+    df_whole = pd.concat([df_unsup , df_sup])
     x = []
-    for k in range(num_unsup_rows+num_sup_rows+1):
+    for k in range(num_unsup_rows+num_sup_rows):
         x.append(k)
     x2 = []
-    for k in range(num_unsup_rows+1, num_unsup_rows+num_sup_rows+1):
+    for k in range(num_unsup_rows, num_unsup_rows+num_sup_rows):
         x2.append(k)
 
     fig, ax1 = plt.subplots()
     ax1.plot(x, df_whole['within 1'], color="limegreen", label="within Cat1")
     ax1.plot(x, df_whole['within 0'], color="green", label="within Cat2")
     ax1.plot(x, df_whole['between'], color="blue", label="between")
-    ax1.axvline(x=num_unsup_rows, color='r', linestyle='--')
-    ax1.axvline(x=1, color='r', linestyle='--')
+    ax1.axvline(x=num_unsup_rows-1, color='r', linestyle='--')
     ax1.set_ylabel('Distance')
     ax1.legend()
 
@@ -92,13 +91,14 @@ def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, 
 
     plt.xlabel("Epoch")
     plt.title("Gabor categorization accuracy and distances across training batches")
+    '''
     if is_sup == "sup":
         plt.savefig(loc+f"/Lr={lr} " + str(time_step-51)+ ".png")
     elif is_sup == "unsup":
         plt.savefig(loc + f"/Lr={lr} " + str(time_step - 1) + ".png")
     else:
         plt.savefig(loc + f"/Lr={lr} " + str(time_step) + ".png")
-
+    '''
     plt.show()
 
 def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc, is_sup, is_control=False, by_size = False): #is control -> trained on size, by_size -> dist labelled by size
@@ -177,8 +177,11 @@ def plot_batch_control(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_ro
 
 
 if __name__ == '__main__':
+    plot_batch(time_step=0, csv_unsup="LR=0.0001, XAB Distance every batch unsup.csv", csv_sup="LR=0.0001, XAB Distance every batch sup, epochs.csv", num_unsup_rows=35, num_sup_rows=35, lr=0.0001, loc="", is_sup=False)
 
     #no train
+
+    '''
 
     plot_batch_control(time_step=0, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
                csv_sup="LR=0.0001, Distance every batch sup, 2 epochs.csv with size", num_unsup_rows=50, num_sup_rows=100, lr=0.0001,
@@ -197,3 +200,4 @@ if __name__ == '__main__':
         plot_batch_control(time_step=i, csv_unsup="LR=0.0001, Distance every batch unsup.csv",
                            csv_sup="LR=0.0001, Distance every batch sup, 2 epochs.csv with size", num_unsup_rows=50, num_sup_rows=100, lr=0.0001,
                            loc="whole_plots/blue-green/slow_lr_point_acc", is_sup="sup")
+    '''

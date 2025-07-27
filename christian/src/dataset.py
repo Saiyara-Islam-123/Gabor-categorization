@@ -78,8 +78,8 @@ def load_gabor_data(excel_file, batch_size=64, base_dir ="../../GABORS_400/gabor
     dataset = GaborDataset(excel_file, transform=transform, base_dir=base_dir)
 
     # Split the dataset into training (80%), validation (10%), and test (10%)
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
+    train_size = int(1 * len(dataset))
+    val_size = int(0.0 * len(dataset))
     test_size = len(dataset) - train_size - val_size
     train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
 

@@ -42,7 +42,7 @@ def get_distances(weights_path, is_sup):
      "within_1" :[]
      }
 
-    df = pd.read_csv("complete_xab_results.csv")
+    df = pd.read_csv("non_xab_pairs")
 
     transform = transforms.Compose([
         transforms.Resize((128, 128)),
@@ -51,8 +51,8 @@ def get_distances(weights_path, is_sup):
     ])
 
     for i in range(len(df["A"])):
-        im_A_path = "../../GABORS_400/gabors_1/" + df["A"].iloc[i].strip("./")
-        im_B_path = "../../GABORS_400/gabors_1/" + df["B"].iloc[i].strip("./")
+        im_A_path = df["A"].iloc[i]
+        im_B_path = df["B"].iloc[i]
         im_A = transform(Image.open(im_A_path).convert('RGB')).reshape(1, 3, 128, 128)
         im_B = transform(Image.open(im_B_path).convert('RGB')).reshape(1, 3, 128, 128)
         stacked = torch.concat([im_A, im_B], dim=0)
@@ -110,7 +110,7 @@ def dists(sup_dir):
     df.to_csv(f"xab_{sup_dir}_dists.csv", index=False)
 
 def plot():
-    df = pd.read_csv("xab_sup_400_dists.csv")
+    df = pd.read_csv("non_xab_sup_400_dists.csv")
     x = []
     for i in range(50):
         x.append(i)
@@ -126,5 +126,32 @@ def plot():
     plt.title("Gabor categorization distances across training batches")
     plt.show()
 
+def xab_pairs_for_training():
+    df = pd.read_csv("../src/complete_xab_results.csv")
+
+    Image_file = []
+    category = []
+
+    for i in range(len(df["type"])):
+        im_A = df["A"].iloc[i]
+        im_B = df["B"].iloc[i]
+        Image_file.append(im_A)
+        if "cat_1" in im_A:
+            category.append("l")
+        elif "cat_0" in im_A:
+            category.append("k")
+
+        Image_file.append(im_B)
+        if "cat_0" in im_B:
+            category.append("k")
+        elif "cat_1" in im_B:
+            category.append("l")
+    df_new = pd.DataFrame()
+    df_new["Image_file"] = Image_file
+    df_new["category"] = category
+    df_new.to_excel("categorisation_xab.xlsx", index=False)
+
 if __name__ == "__main__":
-    get_distances(weights_path="../net_weights/sup_400/sup_net_weights_ lr=0.0001 4 4.pth", is_sup=True)
+    #dists(sup_dir="sup_400")
+    plot()
+    #xab_pairs_for_training()

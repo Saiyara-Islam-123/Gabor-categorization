@@ -5,6 +5,35 @@ random.seed(0)
 import numpy as np
 import pandas as pd
 
+def xab_pairs_dist(X, y):
+    d = {}
+    d[(0, 0)] = []
+    d[(0, 1)] = []
+    d[(1, 1)] = []
+    for i in range(0, y.shape[0], 2):
+        y1 = y[i].item()
+        y2 = y[i+1].item()
+        mat_1 = X[i]
+        mat_2 = X[i+1]
+
+        mat_1_flattened = mat_1.view(mat_1.size(0), -1)
+        mat_2_flattened = mat_2.view(mat_2.size(0), -1)
+
+        mat_1_flattened_normalized = torch.nn.functional.normalize(mat_1_flattened, p=2, dim=1)
+        mat_2_flattened_normalized = torch.nn.functional.normalize(mat_2_flattened, p=2, dim=1)
+
+        if y1 == 1 and y2 == 0:
+
+            d[(y2, y1)].append(torch.norm(mat_1_flattened_normalized - mat_2_flattened_normalized).item())
+        else:
+            d[(y1, y2)].append(torch.norm(mat_1_flattened_normalized - mat_2_flattened_normalized).item())
+
+    within_zero, between, within_one = d[(0, 0)], d[(0, 1)], d[(1, 1)]
+
+    return np.mean(np.array(within_zero)), np.mean(np.array(between)), np.mean(np.array(within_one))
+
+
+
 def sampled_all_distance(X,y):
     d = {}
     d[(0,0)] = []
