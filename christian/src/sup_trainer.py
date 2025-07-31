@@ -11,101 +11,46 @@ class ParentTrainer:
     def train(self):
         unsup_net = Net()
 
-        weight_path = "../net_weights/unsup/unsup_net_weights_ lr= 0.0001 0 49.pth"
+        weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.005 0 99.pth"
         unsup_net.load_state_dict(torch.load(weight_path))
         sup_net = SupervisedNet(unsup_net)
+        self.trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
 
-        train_supervised_control(model=sup_net, main_trainloader=self.main_trainloader, device=self.device, lr=self.lr, epochs=self.epochs, side_train_loader=self.side_trainloader, title=self.title, weights_dir=self.weights_dir, is_control=self.is_control)
-
+        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=self.lr, epochs=1, dist_func = sampled_all_distance, weights_dir=self.weights_dir)
 
 class Slow_lr_Freq_Trainer(ParentTrainer):
     def __init__(self):
         super().__init__()
-        self.main_trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
-        excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
-        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-
-        self.side_trainloader, _, _ = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
-        self.lr = 0.0001
-        self.title = "Slow_lr_Freq"
+        self.lr = 0.001
         self.weights_dir = "slow_lr_freq"
-        self.is_control = False
-
-class Slow_lr_Freq_Trainer_400(ParentTrainer):
-    def __init__(self):
-        super().__init__()
-        self.main_trainloader, _, _ = load_gabor_data("categorisation.xlsx", batch_size=64)
-        self.lr = 0.0001
-        self.title = "Slow_lr_Freq_400"
-        self.weights_dir = "slow_lr_freq_400"
-        self.is_control = False
-    def train(self):
-        unsup_net = Net()
-
-        weight_path = "../net_weights/unsup_400/unsup_net_weights_ lr= 0.0001 4 4.pth"
-        unsup_net.load_state_dict(torch.load(weight_path))
-        sup_net = SupervisedNet(unsup_net)
-
-        train_supervised(model=sup_net, trainloader=self.main_trainloader, device=self.device, lr=self.lr, epochs=5)
 
 
 class Fast_lr_Freq_Trainer(ParentTrainer):
     def __init__(self):
         super().__init__()
-        self.main_trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
-        excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
-        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-
-        self.side_trainloader, _, _ = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
-        self.lr = 0.005
-        self.title = "Fast_lr_Freq"
+        self.lr = 0.01
         self.weights_dir = "fast_lr_freq"
-        self.is_control =False
 
-class Slow_lr_Size_Trainer(ParentTrainer):
-    def __init__(self):
-        super().__init__()
-        self.side_trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
-        excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
-        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-
-        self.main_trainloader, _, _ = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
-        self.lr = 0.0001
-        self.title = "Slow_lr_Size"
-        self.weights_dir = "slow_lr_size"
-        self.is_control = True
-
-class Fast_lr_Size_Trainer(ParentTrainer):
-    def __init__(self):
-        super().__init__()
-        self.side_trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
-        excel_file = "Control/gabors_2/experimentFiles/categorisation.xlsx"
-        base_dir = "C:\\Users\\Admin\\Documents\\GitHub\\Gabor-categorization\\christian\\src\\Control\\gabors_2\\"
-        self.main_trainloader, _, _ = load_gabor_data(excel_file, batch_size=32, base_dir=base_dir)
-        self.lr = 0.005
-        self.title = "Fast_lr_Size"
-        self.weights_dir = "fast_lr_size"
-        self.is_control = True
 
 class XABTrainer(ParentTrainer):
     def __init__(self):
         super().__init__()
-        self.main_trainloader, _, _ = load_gabor_data("categorisation_xab.xlsx", batch_size=64)
+        self.main_trainloader, _, _ = load_gabor_data("categorisation_xab.xlsx", batch_size=32)
         self.lr = 0.0001
         self.title = "Slow_lr_Freq_400"
         self.weights_dir = "slow_lr_freq_400"
-        self.is_control = False
 
     def train(self):
         unsup_net = Net()
 
-        weight_path = "../net_weights/unsup_xab_dataset/unsup_net_weights_ lr= 0.0001 4 6.pth"
+        weight_path = "../net_weights/unsup/unsup_net_weights_ lr= 0.005 0 99.pth"
         unsup_net.load_state_dict(torch.load(weight_path))
         sup_net = SupervisedNet(unsup_net)
 
-        train_supervised(model=sup_net, trainloader=self.main_trainloader, device=self.device, lr=self.lr, epochs=5, dist_func=xab_pairs_dist)
+        train_supervised(model=sup_net, trainloader=self.main_trainloader, device=self.device, lr=self.lr, epochs=5, dist_func=xab_pairs_dist, weights_dir=self.weights_dir)
 
 
 if __name__ == "__main__":
-    trainer = XABTrainer()
-    trainer.train()
+    freq_trainer = Fast_lr_Freq_Trainer()
+    freq_trainer.train()
+

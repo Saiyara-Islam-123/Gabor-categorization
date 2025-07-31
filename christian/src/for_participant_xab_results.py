@@ -29,7 +29,7 @@ def clean_file():
 def get_distances(weights_path, is_sup):
     if is_sup:
         unsup_model = Net()
-        unsup_model.load_state_dict(torch.load("../net_weights/unsup_400/unsup_net_weights_ lr= 0.0001 4 4.pth"))
+        unsup_model.load_state_dict(torch.load("../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 4 4.pth"))
 
         sup_model = SupervisedNet(unsup_model)
         sup_model.load_state_dict(torch.load(weights_path))
@@ -90,7 +90,7 @@ def dists(sup_dir):
          }
     for i in range(5):
         for j in range(5):
-            weights_path = f"../net_weights/unsup_400/unsup_net_weights_ lr= 0.0001 {i} {j}.pth"
+            weights_path = f"../net_weights/unsup_4000/unsup_net_weights_ lr= 0.0001 {i} {j}.pth"
             b, w0, w1 = get_distances(weights_path=weights_path, is_sup=False)
             d["between"].append(b)
             d["within_0"].append(w0)

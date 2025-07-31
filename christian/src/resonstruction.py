@@ -1,6 +1,8 @@
 import torch
 import os
 import matplotlib.pyplot as plt
+from rfc3987 import upatterns_no_names
+
 from dataset import load_gabor_data  # Importing the data loader
 from Net import Net
 
@@ -93,11 +95,11 @@ def reconstruction(model, testloader, device):
 
 if __name__ == "__main__":
     # Define paths and directories
-    excel_file = "categorisation.xlsx"
+    excel_file = "categorisation 4000.xlsx"
     weights_dir = "../net_weights/unsup/"
 
     # Load the data
-    _, _, testloader = load_gabor_data(excel_file, batch_size=64)  # Only need the test loader
+    _, _, testloader = load_gabor_data(excel_file, batch_size=32)  # Only need the test loader
 
     # Initialize the model
     unsup_net = Net()
@@ -106,7 +108,8 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Load the latest weights
-    load_latest_weights(unsup_net, weights_dir)
+    weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.005 0 99.pth"
+    unsup_net.load_state_dict(torch.load(weight_path))
 
     # Test reconstruction with the model
     reconstruction(unsup_net, testloader, device)

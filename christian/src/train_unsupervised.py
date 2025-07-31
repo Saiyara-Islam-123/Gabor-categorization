@@ -9,8 +9,9 @@ import os
 import numpy as np
 from dist import *
 import pandas as pd
+import itertools
 
-def train_unsupervised(model, trainloader, device, lr, epochs=5, dist_func = sampled_all_distance):
+def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func = sampled_all_distance):
     """
     Trains an unsupervised model (e.g., autoencoder) using a specified dataset and parameters.
     This function uses Mean Squared Error (MSE) loss for reconstruction and updates the model's
@@ -28,6 +29,8 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5, dist_func = sam
     :type epochs: int, optional
     :return: None
     """
+
+
     # Define the loss function specific for autoencoder
     criterion = nn.MSELoss()  # Mean Squared Error loss for reconstruction
     # Define optimizer
@@ -48,24 +51,24 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5, dist_func = sam
     #ax.set_ylabel("Loss")
     #loss_line, = ax.plot([], [], label="Loss", color="blue")  # Create the line for loss
     #ax.legend()  # Add legend once
-    avg_distances = {}
-    avg_distances[(0,0)] = []
-    avg_distances[(0, 1)] = []
-    avg_distances[(1, 1)] = []
+    avg_distances_freq = {}
+    avg_distances_freq[(0,0)] = []
+    avg_distances_freq[(0, 1)] = []
+    avg_distances_freq[(1, 1)] = []
 
     for epoch in range(epochs):
         running_loss = 0.0
         batch = 0
-        for images, labels in trainloader:
-            images = images.to(device)  # Move input images to the same device as the model
+        for images_freq, labels_freq in trainloader_freq:
+            images_freq = images_freq.to(device)  # Move input images to the same device as the model
 
             # Zero the parameter gradients
             optimizer.zero_grad()
 
             # Forward pass
-            outputs = model(images)
+            outputs = model(images_freq)
 
-            loss = criterion(outputs, images)
+            loss = criterion(outputs, images_freq)
 
             # Backward pass and optimize
             loss.backward()
@@ -73,59 +76,46 @@ def train_unsupervised(model, trainloader, device, lr, epochs=5, dist_func = sam
 
             running_loss += loss.item()
 
-            zero, zero_one, one = dist_func(model.encoded, labels)
+            zero_freq, zero_one_freq, one_freq = dist_func(model.encoded, labels_freq)
+            print(zero_freq, zero_one_freq, one_freq)
 
-            avg_distances[(0, 0)].append(zero)
-            avg_distances[(0, 1)].append(zero_one)
-            avg_distances[(1, 1)].append(one)
+            avg_distances_freq[(0, 0)].append(zero_freq)
+            avg_distances_freq[(0, 1)].append(zero_one_freq)
+            avg_distances_freq[(1, 1)].append(one_freq)
 
-            avg_loss = running_loss / len(trainloader)
+            avg_loss = running_loss / len(trainloader_freq)
             loss_values.append(avg_loss)
 
             weights_dir = "../net_weights/unsup"
             os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), "../net_weights/unsup_xab_dataset/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
-
-
+            torch.save(model.state_dict(), "../net_weights/unsup_4000/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
             batch += 1
 
             print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
-            print(zero, zero_one, one)
-
-        # Update the real-time plot
-        #clear_output(wait=True)  # Clear the previous output
-        #loss_line.set_xdata(range(1, len(loss_values) + 1))  # Update x values (epochs)
-        #loss_line.set_ydata(loss_values)  # Update y values (loss)
-
-        #ax.relim()  # Recalculate limits
-        #ax.autoscale_view()  # Autoscale to fit new data
-
-        #plt.pause(0.1)  # Pause to display the updated plot
 
 
 
-    # Keep the plot open after training
-    #plt.ioff()
-    #plt.close(fig)
-    # Save the loss values as a NumPy array
     loss_file_path = os.path.join(results_dir, "unsup_epoch_losses.npy")
     np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
     df = pd.DataFrame()
-    df["within 0"] = avg_distances[(0,0)]
-    df["within 1"] = avg_distances[(1,1)]
-    df["between"] = avg_distances[(0,1)]
-    df.to_csv(f"LR={lr}, XAB Distance every batch unsup.csv", index=False)
+    df["within 0"] = avg_distances_freq[(0,0)]
+    df["within 1"] = avg_distances_freq[(1,1)]
+    df["between"] = avg_distances_freq[(0,1)]
+
+
+    df.to_csv(f"LR={lr}, Distance every batch unsup.csv", index=False)
 
     print(f"Loss values saved as NumPy array at: {loss_file_path}")
+
 
 
 if __name__ == "__main__":
     # Path to your Excel file
     # Define the relative path
-    excel_file = "categorisation_xab.xlsx"
+    excel_file = "categorisation 4000.xlsx"
 
     # Load the data
-    trainloader, valloader, testloader = load_gabor_data(excel_file,batch_size=64)
+    trainloader,valloader, testloader = load_gabor_data(excel_file,batch_size=32)
 
     # Initialize the autoencoder model
     unsup_net = Net()
@@ -134,4 +124,5 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader, device, lr=0.0001, epochs=5, dist_func=xab_pairs_dist)
+    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.005, epochs=1, dist_func=sampled_all_distance)
+
