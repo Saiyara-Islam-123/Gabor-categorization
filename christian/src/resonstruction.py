@@ -5,6 +5,7 @@ from rfc3987 import upatterns_no_names
 
 from dataset import load_gabor_data  # Importing the data loader
 from Net import Net
+from Transformer import Transformer
 
 
 def load_latest_weights(model, weights_dir):
@@ -102,13 +103,13 @@ if __name__ == "__main__":
     _, _, testloader = load_gabor_data(excel_file, batch_size=32)  # Only need the test loader
 
     # Initialize the model
-    unsup_net = Net()
+    unsup_net = Transformer()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     unsup_net.to(device)
 
     # Load the latest weights
-    weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.005 0 99.pth"
+    weight_path = "../net_weights/unsup_4000_transformer/unsup_transformer_weights_ lr= 5e-05 9 24.pth"
     unsup_net.load_state_dict(torch.load(weight_path))
 
     # Test reconstruction with the model

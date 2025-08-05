@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.nn import Transformer
+
 from dataset import load_gabor_data  # Importing the data loading function from dataset.py
 from Net import Net
 import matplotlib.pyplot as plt
@@ -10,6 +12,7 @@ import numpy as np
 from dist import *
 import pandas as pd
 import itertools
+from Transformer import *
 
 def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func = sampled_all_distance):
     """
@@ -68,6 +71,7 @@ def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func 
             # Forward pass
             outputs = model(images_freq)
 
+
             loss = criterion(outputs, images_freq)
 
             # Backward pass and optimize
@@ -86,26 +90,20 @@ def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func 
             avg_loss = running_loss / len(trainloader_freq)
             loss_values.append(avg_loss)
 
-            weights_dir = "../net_weights/unsup"
-            os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), "../net_weights/unsup_4000/unsup_net_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
+
+            torch.save(model.state_dict(), "../net_weights/unsup_4000_transformer/unsup_transformer_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
             batch += 1
 
             print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
 
 
-
-    loss_file_path = os.path.join(results_dir, "unsup_epoch_losses.npy")
-    np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
     df = pd.DataFrame()
     df["within 0"] = avg_distances_freq[(0,0)]
     df["within 1"] = avg_distances_freq[(1,1)]
     df["between"] = avg_distances_freq[(0,1)]
 
 
-    df.to_csv(f"LR={lr}, Distance every batch unsup.csv", index=False)
-
-    print(f"Loss values saved as NumPy array at: {loss_file_path}")
+    df.to_csv(f"LR={lr}, Distance every batch unsup transformer.csv", index=False)
 
 
 
@@ -115,14 +113,14 @@ if __name__ == "__main__":
     excel_file = "categorisation 4000.xlsx"
 
     # Load the data
-    trainloader,valloader, testloader = load_gabor_data(excel_file,batch_size=32)
+    trainloader,valloader, testloader = load_gabor_data(excel_file,batch_size=128)
 
     # Initialize the autoencoder model
-    unsup_net = Net()
+    unsup_net = Transformer()
     # Check if GPU is available and move the model to GPU if possible
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.005, epochs=1, dist_func=sampled_all_distance)
+    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.00005, epochs=10, dist_func=sampled_all_distance)
 
