@@ -49,8 +49,9 @@ class XABTrainer(ParentTrainer):
 
         train_supervised(model=sup_net, trainloader=self.main_trainloader, device=self.device, lr=self.lr, epochs=5, dist_func=xab_pairs_dist, weights_dir=self.weights_dir)
 
-
+'''
 if __name__ == "__main__":
     freq_trainer = Fast_lr_Freq_Trainer()
     freq_trainer.train()
 
+'''

@@ -109,7 +109,7 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Load the latest weights
-    weight_path = "../net_weights/unsup_4000_transformer/unsup_transformer_weights_ lr= 5e-05 9 24.pth"
+    weight_path = "../net_weights/unsup_4000_transformer/unsup_transformer_weights_ lr= 5e-05 0 49.pth"
     unsup_net.load_state_dict(torch.load(weight_path))
 
     # Test reconstruction with the model

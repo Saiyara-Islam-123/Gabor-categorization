@@ -68,11 +68,7 @@ def sampled_all_distance(X,y):
 
     return np.mean(np.array(within_zero)), np.mean(np.array(between)), np.mean(np.array(within_one))
 
-
-
-#I basically find the Euclidean distance between two random datapoints from these two bigger matrices.
-
-if __name__== '__main__':
+def no_train_dist():
     excel_file = "categorisation 4000.xlsx"
 
     train_loader, _, _ = load_gabor_data(excel_file, batch_size=32)
@@ -82,10 +78,8 @@ if __name__== '__main__':
     avg_distances[(1, 1)] = []
     df = pd.DataFrame()
 
-
     for images, labels in train_loader:
-
-        zero, zero_one, one = (sampled_all_distance(X=images.reshape(32, 3*128*128), y=labels.reshape(32, 1)))
+        zero, zero_one, one = (sampled_all_distance(X=images.reshape(32, 3 * 128 * 128), y=labels.reshape(32, 1)))
         avg_distances[(0, 0)].append(zero)
         avg_distances[(0, 1)].append(zero_one)
         avg_distances[(1, 1)].append(one)
@@ -95,4 +89,6 @@ if __name__== '__main__':
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df.to_csv("Distance no train.csv", index=False)
-    
+
+#I basically find the Euclidean distance between two random datapoints from these two bigger matrices.
+

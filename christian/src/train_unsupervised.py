@@ -106,21 +106,37 @@ def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func 
     df.to_csv(f"LR={lr}, Distance every batch unsup transformer.csv", index=False)
 
 
-
-if __name__ == "__main__":
-    # Path to your Excel file
-    # Define the relative path
+def unsup_trainer():
     excel_file = "categorisation 4000.xlsx"
 
     # Load the data
-    trainloader,valloader, testloader = load_gabor_data(excel_file,batch_size=128)
+    trainloader, valloader, testloader = load_gabor_data(excel_file, batch_size=32)
 
     # Initialize the autoencoder model
-    unsup_net = Transformer()
+    unsup_net = Net()
     # Check if GPU is available and move the model to GPU if possible
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.00005, epochs=10, dist_func=sampled_all_distance)
+    train_unsupervised(unsup_net, trainloader_freq=trainloader, device=device, lr=0.005, epochs=1,
+                       dist_func=sampled_all_distance)
 
+'''if __name__ == "__main__":
+    # Path to your Excel file
+    # Define the relative path
+    excel_file = "categorisation 4000.xlsx"
+
+    # Load the data
+    trainloader,valloader, testloader = load_gabor_data(excel_file,batch_size=32)
+
+    # Initialize the autoencoder model
+    unsup_net = Net()
+    # Check if GPU is available and move the model to GPU if possible
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    unsup_net.to(device)
+
+    # Train the model
+    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.005, epochs=1, dist_func=sampled_all_distance)
+
+'''

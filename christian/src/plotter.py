@@ -30,7 +30,7 @@ class ParentPlotter:
                 a = f"../whole_plots/blue-green/fast_lr_freq/Lr=0.01 0.png"
                 b = "../whole_plots/scatter_plots/no_train/no_training.png"
                 merge(a, b, title="no_train ", loc=self.combined_dir)
-            '''
+
             elif index < 101:
                 a  = f"{self.blue_green_dir}/Lr={self.lr} {index}.png"
                 b = f"../whole_plots/scatter_plots/unsup/unsup lr = 0.001, 0 {index-1}.png"
@@ -40,7 +40,7 @@ class ParentPlotter:
                 a = f"{self.blue_green_dir}/Lr={self.lr} {index}.png"
                 b = f"{self.scatter_plots_dir}/sup lr = {self.lr}, 0 {index - 101}.png"
                 merge(a, b, title=f"z sup {index} ", loc=self.combined_dir)
-            '''
+
 class Slow_lr_Freq_Plotter(ParentPlotter):
     def __init__(self):
         super().__init__()
@@ -69,6 +69,8 @@ def plot(plotter):
     #plotter.plot_scatter_plots()
     plotter.combine_plots()
 
+'''
 if __name__ == "__main__":
     plotter =  Fast_lr_Freq_Plotter()
     plot(plotter)
+'''
