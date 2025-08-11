@@ -11,26 +11,28 @@ class ParentTrainer:
     def train(self):
         unsup_net = Net()
 
-        weight_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.005 0 99.pth"
-        unsup_net.load_state_dict(torch.load(weight_path))
+        unsup_net.load_state_dict(torch.load("../net_weights/Prev runs/"+self.unsup_weight_path+"/unsup_weights_ lr= 0.005 0 99.pth"))
         sup_net = SupervisedNet(unsup_net)
         self.trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
 
-        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=self.lr, epochs=1, dist_func = sampled_all_distance, weights_dir=self.weights_dir)
+        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=self.lr, epochs=1, dist_func = sampled_all_distance, weights_dir=self.weights_dir, csv_dir=self.csv_dir)
 
 class Slow_lr_Freq_Trainer(ParentTrainer):
-    def __init__(self):
+    def __init__(self, unsup_weight_path, sup_weights_dir, csv_dir):
         super().__init__()
         self.lr = 0.001
-        self.weights_dir = "slow_lr_freq"
+        self.weights_dir = sup_weights_dir
+        self.unsup_weight_path = unsup_weight_path
+        self.csv_dir = csv_dir
 
 
 class Fast_lr_Freq_Trainer(ParentTrainer):
-    def __init__(self):
+    def __init__(self, unsup_weight_path, sup_weights_dir, csv_dir):
         super().__init__()
         self.lr = 0.01
-        self.weights_dir = "fast_lr_freq"
-
+        self.weights_dir = sup_weights_dir
+        self.unsup_weight_path = unsup_weight_path
+        self.csv_dir = csv_dir
 
 class XABTrainer(ParentTrainer):
     def __init__(self):

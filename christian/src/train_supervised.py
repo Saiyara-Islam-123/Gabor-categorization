@@ -11,7 +11,7 @@ import pandas as pd
 import itertools
 
 ######################for XAB pairs or for all pairs, frequency training ############################################
-def train_supervised(model, trainloader, device, lr, weights_dir, epochs=15, dist_func = sampled_all_distance):
+def train_supervised(model, trainloader, device, lr, weights_dir, csv_dir, epochs=15, dist_func = sampled_all_distance):
 
     # Define the loss function specific for supervised learning
     criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
@@ -21,8 +21,6 @@ def train_supervised(model, trainloader, device, lr, weights_dir, epochs=15, dis
     model.train()
 
     # Create the folder for saving results if it doesn't exist
-    results_dir = "../epochs_results"
-    os.makedirs(results_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
 
 
     loss_values = []
@@ -76,35 +74,28 @@ def train_supervised(model, trainloader, device, lr, weights_dir, epochs=15, dis
 
             #weights_dir = "../net_weights/sup"
             #os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), f"../net_weights/{weights_dir}/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
+            torch.save(model.state_dict(), f"../net_weights/Prev runs/{weights_dir}/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
             print(zero, zero_one, one)
             batch += 1
 
         # Compute average loss and accuracy for the epoch
-        avg_loss = running_loss / len(trainloader)
-        loss_values.append(avg_loss)
+            avg_loss = running_loss / len(trainloader)
+            loss_values.append(avg_loss)
 
-        print(f"Supervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f},")
-
-
+            print(f"Supervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f},")
 
 
 
-    loss_file_path = os.path.join(results_dir, "sup_epoch_losses.npy")
-    np.save(loss_file_path, np.array(loss_values))  # Save as .npy file
-    print(f"Loss values saved as NumPy array at: {loss_file_path}")
+
 
     df = pd.DataFrame()
     df["within 0"] = avg_distances[(0, 0)]
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc"] = accuracy_values
-    df.to_csv(f"LR={lr}, Distance every batch sup, epochs.csv", index=False)
+    df.to_csv(f"Prev runs/{csv_dir}/LR={lr}, Distance every batch sup, epochs.csv", index=False)
 
 
-    accuracy_file_path = os.path.join(results_dir, "sup_epoch_accuracy.npy")
-    #np.save(accuracy_file_path, np.array(accuracy_values))  # Save as .npy file
-    print(f"Accuracy values saved as NumPy array at: {accuracy_file_path}")
 
 
 ##############################################################################################################################

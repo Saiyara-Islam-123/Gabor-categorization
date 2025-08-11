@@ -14,7 +14,7 @@ import pandas as pd
 import itertools
 from Transformer import *
 
-def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func = sampled_all_distance):
+def train_unsupervised(model, trainloader_freq, device, lr, weights_dir, csv_dir, epochs=5, dist_func = sampled_all_distance):
     """
     Trains an unsupervised model (e.g., autoencoder) using a specified dataset and parameters.
     This function uses Mean Squared Error (MSE) loss for reconstruction and updates the model's
@@ -43,8 +43,8 @@ def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func 
     loss_values = []
 
     # Create the folder for saving results if it doesn't exist
-    results_dir = "../epochs_results"
-    os.makedirs(results_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
+    #results_dir = "../epochs_results"
+    #os.makedirs(results_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
 
     # Initialize the plot for real-time visualization
     #plt.ion()
@@ -91,7 +91,7 @@ def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func 
             loss_values.append(avg_loss)
 
 
-            torch.save(model.state_dict(), "../net_weights/unsup_4000_transformer/unsup_transformer_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
+            torch.save(model.state_dict(), f"../net_weights/Prev runs/{weights_dir}/unsup_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
             batch += 1
 
             print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
@@ -103,10 +103,10 @@ def train_unsupervised(model, trainloader_freq, device, lr, epochs=5, dist_func 
     df["between"] = avg_distances_freq[(0,1)]
 
 
-    df.to_csv(f"LR={lr}, Distance every batch unsup transformer.csv", index=False)
+    df.to_csv(f"Prev runs/{csv_dir}/LR={lr}, Distance every batch unsup.csv", index=False)
 
 
-def unsup_trainer():
+def unsup_trainer(weights_dir, csv_dir):
     excel_file = "categorisation 4000.xlsx"
 
     # Load the data
@@ -120,7 +120,7 @@ def unsup_trainer():
 
     # Train the model
     train_unsupervised(unsup_net, trainloader_freq=trainloader, device=device, lr=0.005, epochs=1,
-                       dist_func=sampled_all_distance)
+                       dist_func=sampled_all_distance, weights_dir=weights_dir, csv_dir=csv_dir)
 
 '''if __name__ == "__main__":
     # Path to your Excel file

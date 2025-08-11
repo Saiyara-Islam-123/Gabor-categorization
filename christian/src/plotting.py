@@ -54,7 +54,7 @@ def plot_skip_batch(time_step, csv_unsup, csv_sup, lr, loc):
     plt.show()
 
 def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc):
-    df_no_train = pd.read_csv("Prev runs/Distance no train.csv")
+    df_no_train = pd.read_csv("Prev runs/run_1/Distance no train.csv")
 
     df_unsup = pd.read_csv(csv_unsup)
     df_unsup = df_unsup.tail(num_unsup_rows)
