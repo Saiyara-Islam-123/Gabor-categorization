@@ -27,11 +27,11 @@ def of_two(matrix):
     return tsne.fit_transform(matrix)
 
 
-def scatter_plot(train_type, weights, lr, batch, epoch, loc):
+def scatter_plot(train_type, weights, lr, batch, epoch, loc,run=None):
 
     if train_type == "sup":
         unsup_net = Net()
-        unsup_weights_path = "../net_weights/unsup_4000/unsup_net_weights_ lr= 0.005 0 99.pth"
+        unsup_weights_path = f"../net_weights/Prev runs/run_{run}/unsup_4000/unsup_weights_ lr= 0.005 0 99.pth"
         unsup_net.load_state_dict(torch.load(unsup_weights_path))
 
         m = SupervisedNet(unsup_net)

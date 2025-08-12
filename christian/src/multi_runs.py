@@ -29,7 +29,7 @@ def run_slow_sup_lr(run_number):
 
 def take_avg_dist(csv_file):
     dfs_as_np = []
-    for i in range(1, 11):
+    for i in range(1, 10):
         df = pd.read_csv(f"Prev runs/run_{i}/{csv_file}")
         dfs_as_np.append(df.to_numpy())
 
@@ -110,6 +110,17 @@ def rename():
         new_path = f"../net_weights/Prev runs/run_1/unsup_4000/unsup_weights_ lr= 0.005 0 {i}.pth"
         shutil.copyfile(prev_path, new_path)
 
+
 if __name__ == '__main__':
-    for i in range(99, 100):
-        mean_scatter_plot(weights=f"sup_net_weights_ lr=0.001 0 {i}.pth", weights_type="slow_lr_freq", epoch=0, batch=i, lr=0.001)
+    '''
+    take_avg_dist(csv_file="Distance no train.csv")
+    take_avg_dist(csv_file="LR=0.001, Distance every batch sup, epochs.csv")
+    take_avg_dist(csv_file="LR=0.005, Distance every batch unsup.csv")
+
+
+    for i in range(2,10):
+        os.mkdir(f"../whole_plots/scatter_plots_multi_run/unsup/run_{i}")
+        for j in range(0, 100):
+            scatter_plot(train_type="unsup", weights=f"../net_weights/Prev runs/run_{i}/unsup_4000/unsup_weights_ lr= 0.005 0 {j}.pth", lr=0.005, batch=j, epoch=0, loc=f"../whole_plots/scatter_plots_multi_run/unsup/run_{i}", run=i)
+
+    '''

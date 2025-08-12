@@ -54,7 +54,7 @@ def plot_skip_batch(time_step, csv_unsup, csv_sup, lr, loc):
     plt.show()
 
 def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, loc):
-    df_no_train = pd.read_csv("Prev runs/run_1/Distance no train.csv")
+    df_no_train = pd.read_csv("mean_dist/Distance no train.csv")
 
     df_unsup = pd.read_csv(csv_unsup)
     df_unsup = df_unsup.tail(num_unsup_rows)
@@ -102,7 +102,7 @@ def plot_batch(time_step, csv_unsup, csv_sup, num_unsup_rows, num_sup_rows, lr, 
 
 
 if __name__ == '__main__':
-    plot_batch(time_step=0, csv_unsup="LR=0.0001, XAB Distance every batch unsup.csv", csv_sup="LR=0.0001, XAB Distance every batch sup, epochs.csv", num_unsup_rows=35, num_sup_rows=35, lr=0.0001, loc="", is_sup=False)
+    plot_batch(time_step=0, csv_unsup="mean_dist/LR=0.005, Distance every batch unsup.csv", csv_sup="mean_dist/LR=0.001, Distance every batch sup, epochs.csv", num_unsup_rows=100, num_sup_rows=100, lr=0.001, loc="mean_dist")
 
     #no train
 
