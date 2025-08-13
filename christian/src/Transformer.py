@@ -4,7 +4,7 @@ import torch
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model=16*16, dropout= 0.1, max_len = 5000):
+    def __init__(self, d_model=32*32, dropout= 0.1, max_len = 5000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -35,25 +35,24 @@ class Transformer(nn.Module):
             nn.ReLU(),
             nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 64x64 -> 32x32
             nn.ReLU(),
-            nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 32x32 -> 16x16
-            nn.ReLU(),
 
-
-        )#batch, 16*16*16 output -> turn into batch, 16, 16*16
+        )#batch, 16*32*32 output -> turn into batch, 16, 32*32
 
         self.nn1_decoder = nn.Sequential(
 
-            nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
-            nn.ReLU(),
+
             nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
             nn.ReLU(),
             nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, output_padding=0),
             nn.Sigmoid()
         )
 
-        self.att = nn.ModuleList(nn.MultiheadAttention(16*16, 16, batch_first=True) for _ in range(5))
+        self.att = nn.ModuleList(nn.MultiheadAttention(32*32, 32, batch_first=True) for _ in range(10))
 
         self.nn2_encoder = nn.Sequential(
+
+            nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 32x32 -> 16x16
+            nn.ReLU(),
 
             nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 16x16 -> 8x8
             nn.ReLU(),
@@ -74,30 +73,32 @@ class Transformer(nn.Module):
             nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
             nn.ReLU(),
             nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
+            nn.ReLU(),
+            nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
 
         )
         self.positional_encoder = PositionalEncoding()
 
     def forward(self, x):
         x = self.nn1_encoder(x)
-        x = x.reshape(16 ,x.size(0) , 16*16).clone()
+        x = x.reshape(16 ,x.size(0) , 32*32).clone()
         x = self.positional_encoder(x)
-        x = x.reshape(x.size(1), 16, 16*16).clone()
+        x = x.reshape(x.size(1), 16, 32*32).clone()
 
         for multihead in self.att:
             x, _ = multihead(x, x, x)
-        x = x.reshape(x.size(0), 16, 16,16).clone()
+        x = x.reshape(x.size(0), 16, 32,32).clone()
 
         x = self.nn2_encoder(x)
         self.encoded = x
         ########################################################
         x = self.nn2_decoder(x)
 
-        x = x.reshape(x.size(0), 16, 16 * 16).clone()
+        x = x.reshape(x.size(0), 16, 32 * 32).clone()
 
         for multihead in self.att:
             x, _ = multihead(x, x, x)
-        x = x.reshape(x.size(0), 16, 16, 16).clone()
+        x = x.reshape(x.size(0), 16, 32, 32).clone()
         x = self.nn1_decoder(x)
 
         return x
