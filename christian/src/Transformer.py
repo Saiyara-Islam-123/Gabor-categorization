@@ -4,7 +4,7 @@ import torch
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model=32*32, dropout= 0.1, max_len = 5000):
+    def __init__(self, d_model=16, dropout= 0.1, max_len = 5000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -20,7 +20,6 @@ class PositionalEncoding(nn.Module):
                Arguments:
                    x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
                """
-
         x = x + self.pe[:x.size(0)] #adding positional encoding to matrix
         return self.dropout(x)
 
@@ -31,34 +30,24 @@ class Transformer(nn.Module):
 
         self.nn1_encoder = nn.Sequential(
 
-            nn.Conv2d(3, 16, kernel_size=4, stride=2, padding=1),  # 128x128 -> 64x64
-            nn.ReLU(),
-            nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 64x64 -> 32x32
+            nn.Conv2d(3, 16, kernel_size=68, stride=2, padding=1),  # 128x128 -> 32X32
             nn.ReLU(),
 
         )#batch, 16*32*32 output -> turn into batch, 16, 32*32
 
         self.nn1_decoder = nn.Sequential(
 
-
-            nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
-            nn.ReLU(),
-            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, output_padding=0),
+            nn.ConvTranspose2d(16, 3, kernel_size=68, stride=2, padding=1, output_padding=0),
             nn.Sigmoid()
         )
 
-        self.att = nn.ModuleList(nn.MultiheadAttention(32*32, 32, batch_first=True) for _ in range(10))
+        self.att_encoder = nn.ModuleList(nn.MultiheadAttention(32*32, 32, batch_first=True) for _ in range(10))
+        self.att_decoder = nn.ModuleList(nn.MultiheadAttention(32 * 32, 32, batch_first=True) for _ in range(10))
 
         self.nn2_encoder = nn.Sequential(
 
-            nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 32x32 -> 16x16
+            nn.Conv2d(16, 16, kernel_size=28, stride=2, padding=1),  # 32x32 -> 4x4
             nn.ReLU(),
-
-            nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 16x16 -> 8x8
-            nn.ReLU(),
-            nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1),  # 8x8 -> 4x4
-            nn.ReLU(),
-
             nn.Flatten(),
             nn.Linear(256, 128),
             nn.ReLU(),
@@ -70,37 +59,42 @@ class Transformer(nn.Module):
             nn.ReLU(),
             nn.Unflatten(1, (16, 4, 4)),
             nn.ReLU(),
-            nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
-            nn.ReLU(),
-            nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
-            nn.ReLU(),
-            nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
-
+            nn.ConvTranspose2d(16, 16, kernel_size=28, stride=2, padding=1, output_padding=0),
         )
         self.positional_encoder = PositionalEncoding()
 
     def forward(self, x):
-        x = self.nn1_encoder(x)
-        x = x.reshape(16 ,x.size(0) , 32*32).clone()
+        encoder_outputs = []
+        for layer in self.nn1_encoder:
+            x = layer(x)
+            encoder_outputs.append(x)
+        batch_size = x.size(0)
+        x = x.reshape(32*32, batch_size, 16).clone()
         x = self.positional_encoder(x)
-        x = x.reshape(x.size(1), 16, 32*32).clone()
-
-        for multihead in self.att:
+        x = x.reshape(batch_size, 16, 32*32).clone()
+        for multihead in self.att_encoder:
             x, _ = multihead(x, x, x)
         x = x.reshape(x.size(0), 16, 32,32).clone()
 
-        x = self.nn2_encoder(x)
+        for layer in self.nn2_encoder:
+            x = layer(x)
+            encoder_outputs.append(x)
+
         self.encoded = x
+
+        encoder_outputs = encoder_outputs[::-1]
         ########################################################
-        x = self.nn2_decoder(x)
+        for i, layer in enumerate(self.nn2_decoder):
+            if isinstance(layer, nn.ConvTranspose2d) and i < len(encoder_outputs):
+                x = x + 0.5 * encoder_outputs[i]
+            x = layer(x)
 
         x = x.reshape(x.size(0), 16, 32 * 32).clone()
-
-        for multihead in self.att:
+        for multihead in self.att_decoder:
             x, _ = multihead(x, x, x)
         x = x.reshape(x.size(0), 16, 32, 32).clone()
-        x = self.nn1_decoder(x)
 
+        x= self.nn1_decoder(x)
         return x
 
 class SupNetwork(nn.Module):
