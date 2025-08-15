@@ -74,7 +74,7 @@ def train_supervised(model, trainloader, device, lr, weights_dir, csv_dir, epoch
 
             #weights_dir = "../net_weights/sup"
             #os.makedirs(weights_dir, exist_ok=True)  # Automatically create the directory if it doesn't exist
-            torch.save(model.state_dict(), f"../net_weights/Prev runs/{weights_dir}/sup_net_weights_ lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
+            torch.save(model.state_dict(), f"{weights_dir}/sup_net_weights_lr={lr} "+str(epoch)+  " " + str(batch) +".pth")
             print(zero, zero_one, one)
             batch += 1
 

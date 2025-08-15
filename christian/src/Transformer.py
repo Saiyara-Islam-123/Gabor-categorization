@@ -56,18 +56,27 @@ class Transformer(nn.Module):
 
             nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1),  # 32x32 -> 16x16
             nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),  # 16x16 -> 8X8
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),  # 8X8 -> 4X4
+            nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(8192, 3000),
+            nn.Linear(2048, 500),
             nn.ReLU(),
 
         )
 
         self.nn2_decoder = nn.Sequential(
-            nn.Linear(3000, 8192),
+            nn.Linear(500, 2048),
             nn.ReLU(),
-            nn.Unflatten(1, (32, 16, 16)),
+            nn.Unflatten(1, (128, 4, 4)),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, output_padding=0),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1, output_padding=0),
+            nn.ReLU(),
             nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
             nn.ReLU(),
+
         )
         self.positional_encoder = PositionalEncoding(16)
 
@@ -118,29 +127,36 @@ class SupNetwork(nn.Module):
         super(SupNetwork, self).__init__()
         self.transformer = transformer
         self.encoder_output = None
+
         self.classifier = nn.Sequential(
-            nn.Linear(3000, 1000),
-            nn.ReLU(),
-            nn.Linear(1000, 500),
-            nn.ReLU(),
             nn.Linear(500, 128),
             nn.ReLU(),
-            nn.Linear(128,2)
+            nn.Linear(128, 2),
+
         )
+        self.positional_encoder = PositionalEncoding(16)
 
     def forward(self, x):
         batch_size = x.size(0)
         x = self.transformer.nn1_encoder(x)
 
-        x = x.reshape(32 * 32, batch_size, 16).clone()
+        #x is in shape batch, 16, 32, 32
+        #flatten it to batch, 16, 32*32
+        x = x.reshape(batch_size, 16, 32*32)
+        #reshape it to 32*32, batch_size, 16
+        x = x.permute(2, 0, 1)
         x = self.positional_encoder(x)
-        x = x.reshape(batch_size, 32 * 32, 16).clone()
-
-        x = self.transformer.att_encoder(x,x,x)
-        x = x.reshape(batch_size, 16, 32, 32).clone()
+        #reshape it to batch_size, 32*32, 16
+        x = x.permute(1, 0,2)
+        x,_ = self.transformer.att_encoder(x,x,x)
+        #unflatten it to batch_size, 32, 32, 16
+        x = x.reshape(batch_size, 32, 32, 16)
+        #reshape it to batch_size, 16, 32, 32
+        x = x.permute(0, 3, 1,2)
 
         x = self.transformer.nn2_encoder(x)
 
         self.encoder_output = x
+
         x = self.classifier(x)
         return x
