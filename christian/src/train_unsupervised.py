@@ -73,12 +73,14 @@ def train_unsupervised(model, trainloader_freq, device, lr, weights_dir, csv_dir
             loss_values.append(avg_loss)
 
 
-            torch.save(model.state_dict(), f"../net_weights/{weights_dir}/unsup_weights_" + " lr= " + str(lr) + " " +str(epoch)+ " " + str(batch) +".pth")
+
             batch += 1
 
             print(f"Unsupervised epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
 
-
+            torch.save(model.state_dict(),
+                   f"../net_weights/{weights_dir}/unsup_weights_" + " lr= " + str(lr) + " " + str(epoch) + " " + str(
+                       batch) + ".pth")
     df = pd.DataFrame()
     df["within 0"] = avg_distances_freq[(0,0)]
     df["within 1"] = avg_distances_freq[(1,1)]
@@ -119,5 +121,5 @@ if __name__ == "__main__":
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.001, epochs=1, dist_func=sampled_all_distance, weights_dir="Transformer_unsup", csv_dir=".")
+    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.001,  epochs=3, dist_func=sampled_all_distance, weights_dir="Transformer_unsup", csv_dir=".")
 

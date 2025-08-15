@@ -4,7 +4,7 @@ import torch
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model=16, dropout= 0.1, max_len = 5000):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -17,84 +17,100 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         """
-               Arguments:
-                   x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
-               """
-        x = x + self.pe[:x.size(0)] #adding positional encoding to matrix
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        """
+        x = x + self.pe[:x.size(0)]
         return self.dropout(x)
 
+
 class Transformer(nn.Module):
+
+
     def __init__(self):
         super().__init__()
         self.encoded = None
 
         self.nn1_encoder = nn.Sequential(
 
-            nn.Conv2d(3, 16, kernel_size=68, stride=2, padding=1),  # 128x128 -> 32X32
-            nn.ReLU(),
+                nn.Conv2d(3,    8, kernel_size=4, stride=2, padding=1),  # 128x128 -> 64*64
+                nn.ReLU(),
+                nn.Conv2d(8, 16, kernel_size=4, stride=2, padding=1),  #64*64 -> 32 * 32
+                nn.ReLU(),
+
 
         )#batch, 16*32*32 output -> turn into batch, 16, 32*32
 
         self.nn1_decoder = nn.Sequential(
+                nn.ConvTranspose2d(16, 8, kernel_size=4, stride=2, padding=1, output_padding=0),
+                nn.ReLU(),
+                nn.ConvTranspose2d(8, 3, kernel_size=4, stride=2, padding=1, output_padding=0),
+                nn.Sigmoid(),
 
-            nn.ConvTranspose2d(16, 3, kernel_size=68, stride=2, padding=1, output_padding=0),
-            nn.Sigmoid()
         )
 
-        self.att_encoder = nn.ModuleList(nn.MultiheadAttention(32*32, 32, batch_first=True) for _ in range(10))
-        self.att_decoder = nn.ModuleList(nn.MultiheadAttention(32 * 32, 32, batch_first=True) for _ in range(10))
+        self.att_encoder = nn.MultiheadAttention(16, 4, batch_first=True)
+        self.att_decoder = nn.MultiheadAttention(16, 4, batch_first=True)
 
         self.nn2_encoder = nn.Sequential(
 
-            nn.Conv2d(16, 16, kernel_size=28, stride=2, padding=1),  # 32x32 -> 4x4
+            nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1),  # 32x32 -> 16x16
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(256, 128),
+            nn.Linear(8192, 3000),
             nn.ReLU(),
 
         )
 
         self.nn2_decoder = nn.Sequential(
-            nn.Linear(128, 256),
+            nn.Linear(3000, 8192),
             nn.ReLU(),
-            nn.Unflatten(1, (16, 4, 4)),
+            nn.Unflatten(1, (32, 16, 16)),
+            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1, output_padding=0),
             nn.ReLU(),
-            nn.ConvTranspose2d(16, 16, kernel_size=28, stride=2, padding=1, output_padding=0),
         )
-        self.positional_encoder = PositionalEncoding()
+        self.positional_encoder = PositionalEncoding(16)
 
     def forward(self, x):
-        encoder_outputs = []
+        encoder1_outputs = []
+        encoder2_outputs = []
         for layer in self.nn1_encoder:
             x = layer(x)
-            encoder_outputs.append(x)
+            encoder1_outputs.append(x)
         batch_size = x.size(0)
+
         x = x.reshape(32*32, batch_size, 16).clone()
         x = self.positional_encoder(x)
-        x = x.reshape(batch_size, 16, 32*32).clone()
-        for multihead in self.att_encoder:
-            x, _ = multihead(x, x, x)
-        x = x.reshape(x.size(0), 16, 32,32).clone()
+        x = x.reshape(batch_size, 32*32, 16).clone()
+        print("Pre attention")
+
+        x, _ = self.att_encoder(x, x, x)
+        x = x.reshape(batch_size, 16, 32,32).clone()
 
         for layer in self.nn2_encoder:
             x = layer(x)
-            encoder_outputs.append(x)
+            encoder2_outputs.append(x)
 
         self.encoded = x
 
-        encoder_outputs = encoder_outputs[::-1]
+        encoder2_outputs = encoder2_outputs[::-1]
         ########################################################
+
         for i, layer in enumerate(self.nn2_decoder):
-            if isinstance(layer, nn.ConvTranspose2d) and i < len(encoder_outputs):
-                x = x + 0.5 * encoder_outputs[i]
+            if isinstance(layer, nn.ConvTranspose2d) and i < len(encoder2_outputs):
+                x = x + 0.5 * encoder2_outputs[i]
             x = layer(x)
 
-        x = x.reshape(x.size(0), 16, 32 * 32).clone()
-        for multihead in self.att_decoder:
-            x, _ = multihead(x, x, x)
-        x = x.reshape(x.size(0), 16, 32, 32).clone()
+        x = x.reshape(batch_size, 32 * 32, 16).clone()
 
-        x= self.nn1_decoder(x)
+        x, _ = self.att_decoder(x, x, x)
+        x = x.reshape(batch_size, 16, 32, 32).clone()
+        print("Post attention")
+        encoder1_outputs = encoder1_outputs[::-1]
+        for i, layer in enumerate(self.nn1_decoder):
+            if isinstance(layer, nn.ConvTranspose2d) and i < len(encoder1_outputs):
+                x = x + 0.5 * encoder1_outputs[i]
+            x = layer(x)
         return x
 
 class SupNetwork(nn.Module):
@@ -103,11 +119,28 @@ class SupNetwork(nn.Module):
         self.transformer = transformer
         self.encoder_output = None
         self.classifier = nn.Sequential(
-            nn.Linear(128, 2)
+            nn.Linear(3000, 1000),
+            nn.ReLU(),
+            nn.Linear(1000, 500),
+            nn.ReLU(),
+            nn.Linear(500, 128),
+            nn.ReLU(),
+            nn.Linear(128,2)
         )
 
     def forward(self, x):
-        x = self.transformer(x)
+        batch_size = x.size(0)
+        x = self.transformer.nn1_encoder(x)
+
+        x = x.reshape(32 * 32, batch_size, 16).clone()
+        x = self.positional_encoder(x)
+        x = x.reshape(batch_size, 32 * 32, 16).clone()
+
+        x = self.transformer.att_encoder(x,x,x)
+        x = x.reshape(batch_size, 16, 32, 32).clone()
+
+        x = self.transformer.nn2_encoder(x)
+
         self.encoder_output = x
         x = self.classifier(x)
         return x

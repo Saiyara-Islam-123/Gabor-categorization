@@ -1,5 +1,4 @@
-from abc import ABC
-
+from Transformer import *
 from train_supervised import *
 
 class ParentTrainer:
@@ -51,9 +50,23 @@ class XABTrainer(ParentTrainer):
 
         train_supervised(model=sup_net, trainloader=self.main_trainloader, device=self.device, lr=self.lr, epochs=5, dist_func=xab_pairs_dist, weights_dir=self.weights_dir)
 
-'''
+class TransformerTrainer(ParentTrainer):
+    def __init__(self):
+        super().__init__()
+
+    def train(self):
+        unsup_net = Transformer()
+
+        unsup_net.load_state_dict(torch.load("../net_weights/Transformer_unsup/unsup_weights_ lr= 0.001 0 1.pth"))
+        sup_net = SupNetwork(unsup_net)
+        self.trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
+
+        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=0.001, epochs=3, dist_func = sampled_all_distance, weights_dir="../net_weights/Transformer_sup", csv_dir=".")
+
+
+
+
 if __name__ == "__main__":
-    freq_trainer = Fast_lr_Freq_Trainer()
+    freq_trainer = TransformerTrainer()
     freq_trainer.train()
 
-'''
