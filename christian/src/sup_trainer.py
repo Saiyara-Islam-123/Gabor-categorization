@@ -61,7 +61,7 @@ class TransformerTrainer(ParentTrainer):
         sup_net = SupNetwork(unsup_net)
         self.trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=100)
 
-        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=0.001, epochs=3, dist_func = sampled_all_distance, weights_dir="../net_weights/Transformer_sup", csv_dir=".")
+        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=0.01, epochs=3, dist_func = sampled_all_distance, weights_dir="../net_weights/Transformer_sup", csv_dir=".")
 
 
 

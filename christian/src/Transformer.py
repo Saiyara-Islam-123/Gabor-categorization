@@ -137,26 +137,26 @@ class SupNetwork(nn.Module):
         self.positional_encoder = PositionalEncoding(16)
 
     def forward(self, x):
-        batch_size = x.size(0)
-        x = self.transformer.nn1_encoder(x)
 
-        #x is in shape batch, 16, 32, 32
-        #flatten it to batch, 16, 32*32
+        for layer in self.transformer.nn1_encoder:
+            x = layer(x)
+        batch_size = x.size(0)
+
         x = x.reshape(batch_size, 16, 32*32)
-        #reshape it to 32*32, batch_size, 16
         x = x.permute(2, 0, 1)
+
         x = self.positional_encoder(x)
-        #reshape it to batch_size, 32*32, 16
-        x = x.permute(1, 0,2)
-        x,_ = self.transformer.att_encoder(x,x,x)
-        #unflatten it to batch_size, 32, 32, 16
-        x = x.reshape(batch_size, 32, 32, 16)
-        #reshape it to batch_size, 16, 32, 32
+
+        #32*32, batch_size, 16
+        x= x.permute(1, 0, 2)
+
+        x, _ = self.transformer.att_encoder(x, x, x)
+
+        #batch_size, 32*32, 16
+        x = x.reshape(batch_size, 32,32, 16)
         x = x.permute(0, 3, 1,2)
 
-        x = self.transformer.nn2_encoder(x)
-
+        for layer in self.transformer.nn2_encoder:
+            x = layer(x)
         self.encoder_output = x
-
-        x = self.classifier(x)
         return x
