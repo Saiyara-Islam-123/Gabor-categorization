@@ -5,7 +5,7 @@ from combine_plots import *
 
 class ParentPlotter:
     def __init__(self):
-        self.unsup_csv = "LR=0.005, Distance every batch unsup.csv"
+        self.unsup_csv = "LR=0.001, Distance every batch unsup.csv"
         self.scatter_plot_excel_file = "categorisation 4000.xlsx"
         self.num_unsup_rows = 100
         self.num_sup_rows = 100
@@ -21,7 +21,7 @@ class ParentPlotter:
     def plot_scatter_plots(self):
         for e in range(1):
             for b in range(100):
-                weights = f"{self.weights_dir}/sup_net_weights_ lr={self.lr} {e} {b}.pth"
+                weights = f"{self.weights_dir}/sup_net_weights_lr={self.lr} {e} {b}.pth"
                 scatter_plot(train_type="sup", weights=weights, lr=self.lr, batch=b, epoch=e, loc=self.scatter_plots_dir)
 
     def combine_plots(self):
@@ -33,7 +33,7 @@ class ParentPlotter:
 
             elif index < 101:
                 a  = f"{self.blue_green_dir}/Lr={self.lr} {index}.png"
-                b = f"../whole_plots/scatter_plots/unsup/unsup lr = 0.001, 0 {index-1}.png"
+                b = f"../whole_plots/scatter_plots/unsup_rotated/unsup lr = 0.001, 0 {index-1}.png"
                 merge(a, b, title=f"unsup {index} ", loc=self.combined_dir)
 
             else:
@@ -47,8 +47,8 @@ class Slow_lr_Freq_Plotter(ParentPlotter):
         self.sup_csv ="LR=0.001, Distance every batch sup, epochs.csv"
         self.blue_green_dir = "../whole_plots/blue-green/slow_lr_freq"
         self.lr = 0.001
-        self.weights_dir = "../net_weights/slow_lr_freq"
-        self.scatter_plots_dir= "../whole_plots/scatter_plots/sup_lr_slow"
+        self.weights_dir = "../net_weights/sup"
+        self.scatter_plots_dir= "../whole_plots/scatter_plots/sup_rotated"
         self.combined_dir = "../whole_plots/combined/slow_lr"
 
 
@@ -65,12 +65,11 @@ class Fast_lr_Freq_Plotter(ParentPlotter):
 
 
 def plot(plotter):
-    #plotter.plot_blue_green()
-    #plotter.plot_scatter_plots()
+    plotter.plot_blue_green()
+    plotter.plot_scatter_plots()
     plotter.combine_plots()
 
-'''
+
 if __name__ == "__main__":
-    plotter =  Fast_lr_Freq_Plotter()
+    plotter =  Slow_lr_Freq_Plotter()
     plot(plotter)
-'''

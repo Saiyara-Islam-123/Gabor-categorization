@@ -10,19 +10,18 @@ class ParentTrainer:
     def train(self):
         unsup_net = Net()
 
-        unsup_net.load_state_dict(torch.load("../net_weights/Prev runs/"+self.unsup_weight_path+"/unsup_weights_ lr= 0.005 0 99.pth"))
+        unsup_net.load_state_dict(torch.load("../net_weights/unsup/unsup_weights_ lr= 0.001 0 100.pth"))
         sup_net = SupervisedNet(unsup_net)
         self.trainloader, _, _ = load_gabor_data("categorisation 4000.xlsx", batch_size=32)
 
-        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=self.lr, epochs=1, dist_func = sampled_all_distance, weights_dir=self.weights_dir, csv_dir=self.csv_dir)
+        train_supervised(model=sup_net, trainloader=self.trainloader, device=self.device, lr=self.lr, epochs=1, dist_func = sampled_all_distance, weights_dir=self.weights_dir, csv_dir=".")
 
 class Slow_lr_Freq_Trainer(ParentTrainer):
-    def __init__(self, unsup_weight_path, sup_weights_dir, csv_dir):
+    def __init__(self):
         super().__init__()
         self.lr = 0.001
-        self.weights_dir = sup_weights_dir
-        self.unsup_weight_path = unsup_weight_path
-        self.csv_dir = csv_dir
+        self.weights_dir = "../net_weights/sup"
+
 
 
 class Fast_lr_Freq_Trainer(ParentTrainer):
@@ -67,6 +66,6 @@ class TransformerTrainer(ParentTrainer):
 
 
 if __name__ == "__main__":
-    freq_trainer = TransformerTrainer()
+    freq_trainer = Slow_lr_Freq_Trainer()
     freq_trainer.train()
 

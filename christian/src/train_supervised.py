@@ -93,7 +93,7 @@ def train_supervised(model, trainloader, device, lr, weights_dir, csv_dir, epoch
     df["within 1"] = avg_distances[(1, 1)]
     df["between"] = avg_distances[(0, 1)]
     df["acc"] = accuracy_values
-    df.to_csv(f"Prev runs/{csv_dir}/LR={lr}, Distance every batch sup, epochs.csv", index=False)
+    df.to_csv(f"{csv_dir}/LR={lr}, Distance every batch sup, epochs.csv", index=False)
 
 
 

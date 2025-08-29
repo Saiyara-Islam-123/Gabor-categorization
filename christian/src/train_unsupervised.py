@@ -87,7 +87,7 @@ def train_unsupervised(model, trainloader_freq, device, lr, weights_dir, csv_dir
     df["between"] = avg_distances_freq[(0,1)]
 
 
-    df.to_csv(f"{csv_dir}/LR={lr}, Transformer Distance every batch unsup.csv", index=False)
+    df.to_csv(f"{csv_dir}/LR={lr}, Distance every batch unsup.csv", index=False)
 
 
 def unsup_trainer(weights_dir, csv_dir):
@@ -112,14 +112,14 @@ if __name__ == "__main__":
     excel_file = "categorisation 4000.xlsx"
 
     # Load the data
-    trainloader,valloader, testloader = load_gabor_data(excel_file,batch_size=100)
+    trainloader,valloader, testloader = load_gabor_data(excel_file,batch_size=32)
 
     # Initialize the autoencoder model
-    unsup_net = Transformer()
+    unsup_net = Net()
     # Check if GPU is available and move the model to GPU if possible
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     unsup_net.to(device)
 
     # Train the model
-    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.001,  epochs=3, dist_func=sampled_all_distance, weights_dir="Transformer_unsup", csv_dir=".")
+    train_unsupervised(unsup_net, trainloader_freq=trainloader, device = device, lr=0.001,  epochs=1, dist_func=sampled_all_distance, weights_dir="unsup", csv_dir=".")
 
