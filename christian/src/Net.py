@@ -6,7 +6,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
         # Encoder: Convolutional layers
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1),  # 128x128 -> 64x64
+            nn.Conv2d(1, 16, kernel_size=3, stride=2, padding=1),  # 128x128 -> 64x64
             nn.BatchNorm2d(16),  # Batch normalization after the Conv2d layer
             nn.ReLU(True),
             nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1),  # 64x64 -> 32x32
@@ -16,14 +16,14 @@ class Net(nn.Module):
             nn.BatchNorm2d(64),  # Batch normalization
             nn.ReLU(True),
             nn.Flatten(),
-            nn.Linear(64 * 16 * 16, 256),  # Output of the fully connected layer now has 256 units
-            nn.BatchNorm1d(256),  # Batch normalization for fully connected layer
+            nn.Linear(64 * 16 * 16, 128),  # Output of the fully connected layer now has 256 units
+            nn.BatchNorm1d(128),  # Batch normalization for fully connected layer
             nn.ReLU(True)
         )
 
         # Decoder: Ensuring the output matches 128x128
         self.decoder = nn.Sequential(
-            nn.Linear(256, 64 * 16 * 16),  # Input layer updated for 256 units
+            nn.Linear(128, 64 * 16 * 16),  # Input layer updated for 256 units
             nn.BatchNorm1d(64 * 16 * 16),  # Batch normalization for the Linear layer
             nn.ReLU(True),
             nn.Unflatten(1, (64, 16, 16)),  # Unflatten to (64, 16, 16)
@@ -33,7 +33,7 @@ class Net(nn.Module):
             nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1, output_padding=1),  # 32x32 -> 64x64
             nn.BatchNorm2d(16),  # Batch normalization
             nn.ReLU(True),
-            nn.ConvTranspose2d(16, 3, kernel_size=3, stride=2, padding=1, output_padding=1),  # 64x64 -> 128x128
+            nn.ConvTranspose2d(16, 1, kernel_size=3, stride=2, padding=1, output_padding=1),  # 64x64 -> 128x128
             nn.Sigmoid()  # Sigmoid to ensure values are between 0 and 1
         )
 
@@ -101,7 +101,7 @@ class SupervisedNet(nn.Module):
 
         # Classifier layer on top of the encoder
         self.classifier = nn.Sequential(
-            nn.Linear(256, 2)  # Adjusted input size of 256 for the updated encoder
+            nn.Linear(128, 2)  # Adjusted input size of 256 for the updated encoder
         )
 
     def forward(self, x):

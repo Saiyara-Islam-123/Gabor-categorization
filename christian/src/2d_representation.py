@@ -2,7 +2,12 @@ import os
 import torch
 import numpy as np
 from dataset import load_gabor_data
-from Net import Net, SupervisedNet
+#from Net import Net, SupervisedNet
+from Mlp_Net import Net, SupervisedNet
+from rings_no_overlap import load_many_arcs_data
+
+
+
 
 
 def evaluate_and_save_epochs(model, trainloader, device, weight_dir, num_epochs, save_prefix):
@@ -78,12 +83,13 @@ if __name__ == "__main__":
     sup_weight_dir = os.path.abspath("../net_weights/sup")
 
     # Number of epochs
-    num_unsup_epochs = 15
-    num_sup_epochs = 15
+    num_unsup_epochs = 20
+    num_sup_epochs = 20
 
     # Load data
     excel_file = os.path.join(os.path.expanduser("~"), "Gabor-categorization", "christian", "experimentFiles","categorisation_with_control.xlsx")
-    trainloader, _, _ = load_gabor_data(excel_file, batch_size=64)
+    #trainloader, _, _ = load_gabor_data(excel_file, batch_size=64)
+    trainloader, valloader, testloader, full_dataset = load_many_arcs_data(m_arcs_per_class=5,gap_frac=0.3)
 
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

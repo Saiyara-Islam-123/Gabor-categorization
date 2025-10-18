@@ -3,14 +3,15 @@ import os
 import matplotlib.pyplot as plt
 from dataset import load_gabor_data  # Importing the data loader
 from Net import Net
-
+#from Mlp_Net import Net
+from shapes_paremetrized_with_ring import load_shape_deform_data
+import numpy as np
 
 def load_latest_weights(model, weights_dir):
     """
-    Loads the latest weights for the given model from the specified directory. The
-    function looks for weight files following a naming pattern 'unsup_net_weights_<epoch>.pth',
-    where <epoch> is an integer representing the epoch number. It sorts these files
-    by their epoch numbers and loads the latest one into the model.
+    Loads the latest weights for the given model from the specified directory.
+    The function considers both epoch and batch when identifying the most recent
+    weight file.
 
     :param model: The PyTorch model instance whose weights are to be loaded.
     :type model: torch.nn.Module
@@ -24,22 +25,29 @@ def load_latest_weights(model, weights_dir):
     if not os.path.exists(weights_dir):
         raise FileNotFoundError(f"Weights directory '{weights_dir}' does not exist.")
 
-    # Find all files in the directory
+    # Find all files matching the naming pattern for weights
+    import re
     weight_files = [
-        f for f in os.listdir(weights_dir)
-        if f.startswith("unsup_net_weights_") and f.endswith(".pth")
+        f for f in os.listdir(weights_dir) if re.match(r"unsup_net_weights_epoch_\d+_batch_\d+\.pth", f)
     ]
     if not weight_files:
         raise FileNotFoundError(f"No weights found in directory '{weights_dir}'.")
 
-    # Sort files by epoch number
-    weight_files.sort(key=lambda f: int(f.split("_")[-1].split(".")[0]))  # Extract epoch number
-    latest_weights = weight_files[-1]  # Take the last file (latest epoch)
-    print(latest_weights)
-    # Load weights
-    latest_weights_path = os.path.join(weights_dir, latest_weights)
+    # Extract (epoch, batch) pairs
+    epoch_batch_pairs = [
+        (int(re.search(r"epoch_(\d+)", f).group(1)), int(re.search(r"batch_(\d+)", f).group(1)))
+        for f in weight_files
+    ]
+
+    # Find the file with the latest epoch and batch
+    latest_epoch, latest_batch = max(epoch_batch_pairs, key=lambda x: (x[0], x[1]))
+    latest_weights_file = f"unsup_net_weights_epoch_{latest_epoch}_batch_{latest_batch}.pth"
+
+    # Load the latest weights
+    latest_weights_path = os.path.join(weights_dir, latest_weights_file)
     model.load_state_dict(torch.load(latest_weights_path))
     print(f"Loaded weights from: {latest_weights_path}")
+
 
 
 def reconstruction(model, testloader, device):
@@ -103,8 +111,35 @@ if __name__ == "__main__":
     weights_dir = "../net_weights/unsup/"
 
     # Load the data
-    _, _, testloader = load_gabor_data(excel_file, batch_size=64)  # Only need the test loader
+    #_, _, testloader = load_gabor_data(excel_file, batch_size=64)  # Only need the test loader
+    # ---- Configurable parameters ----
+    m_arcs_per_class = 2
+    gap_frac = (m_arcs_per_class * 0.1) / np.pi
+    mode = "indep_phase"  # "phase" | "mode" | "indep_phase"
 
+    # Harmonics and amplitudes
+    k1, k2, k3, k4 = 3, 3, None, None
+    a1, a2, a3, a4 = 0.1, 0.1, 0.0, 0.0
+    alpha_x, beta_y, gamma_x, delta_y = 0.1, 0.1, 0.1, 0.1
+
+    # Rendering parameters
+    image_size = 128
+    ring_radius_px = 40
+    nA = 200
+    nB = nA
+
+    # ---- Create dataset ----
+    trainloader, valloader, testloader, ds = load_shape_deform_data(nA=nA, nB=nB,
+                                                                    m_arcs_per_class=m_arcs_per_class,
+                                                                    gap_frac=gap_frac,
+                                                                    mode=mode,
+                                                                    k1=k1, k2=k2, k3=k3, k4=k4,
+                                                                    a1=a1, a2=a2, a3=a3, a4=a4,
+                                                                    alpha_x=alpha_x, beta_y=beta_y,
+                                                                    gamma_x=gamma_x, delta_y=delta_y,
+                                                                    image_size=image_size,
+                                                                    ring_radius_px=ring_radius_px,
+                                                                    )
     # Initialize the model
     unsup_net = Net()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
