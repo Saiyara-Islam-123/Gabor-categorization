@@ -13,7 +13,8 @@ from images_of_rings_no_overlap import load_image_ring_data
 from shapes_paremetrized_with_ring_2 import load_shape_deform_data
 from shapes_paremetrized_with_ring_2 import plot_latent_scatter
 
-
+from shape_deform_dataset_v19_studio_full_main import ShapeDeformDataset,set_studio_from_main,plot_phase_ring_with_amp_bands
+from torch.utils.data import Dataset, DataLoader, random_split
 
 def plot_and_record_video(num_unsup_epochs, num_sup_epochs, num_batches,
                           loss_dir="../loss", distances_dir="../distances",
@@ -93,7 +94,12 @@ def plot_and_record_video(num_unsup_epochs, num_sup_epochs, num_batches,
 
     # NEW: draw the original INPUT ring + points in the top-right subplot
     if dataset is not None:
-        A, B = dataset.latents_A, dataset.latents_B
+        #A, B = dataset.latents_A, dataset.latents_B
+        Z = np.asarray(dataset.latents, dtype=np.float32)
+        labs = np.asarray(dataset.labels, dtype=np.int64)
+
+        A = Z[labs == 0]
+        B = Z[labs == 1]
         ax_ring.scatter(A[:, 0], A[:, 1], s=10, color="green", alpha=0.7, label="Class 0")
         ax_ring.scatter(B[:, 0], B[:, 1], s=10, color="lime",  alpha=0.7, label="Class 1")
         ang = np.linspace(0, 2*np.pi, 400)
@@ -107,7 +113,7 @@ def plot_and_record_video(num_unsup_epochs, num_sup_epochs, num_batches,
         ax_ring.grid(True, ls="--", alpha=0.3)
 
         # ALSO: call your original function, exactly as requested
-        plot_latent_scatter(dataset, title=f"Latent (x,y) – alternating arcs (m={m_arcs_per_class})")
+        plot_phase_ring_with_amp_bands(dataset)
 
     # Loss and distances
     ax_loss.set_title("Unsupervised and supervised error evolution")
@@ -193,55 +199,43 @@ def plot_and_record_video(num_unsup_epochs, num_sup_epochs, num_batches,
 if __name__ == "__main__":
     # ---- Configurable parameters ----
     # ---- Configurable parameters ----
-    nA = 1000
-    nB = nA
-    m_arcs_per_class = 2
-    gap_frac = 0.5
-    phase_deg = 0.0
+    nA = 500  # class 0
+    nB = nA  # class 1
 
-    # Amplitude ring params (independent)
-    amp_m_arcs_per_class = 6
-    amp_gap_frac = 0.15
-
-    # Amplitude ring controls
-    amp_ring_radius = 1  # smaller = subtler deformation
-    amp_scale_a1 = 0.2
-    amp_scale_a2 = 0.3
-
-    difficulty_sharp = 0.2  # try 0.3–0.8; 0 = no sharpening difference
-
+    # Image/output settings
     image_size = 128
-    ring_radius_px = 40
+    intensity = 1.0
+    bg = 0.0
+    norm = "max"  # "max" | "l2" | "none"
+    seed = 42
+    batch_size = 64
 
-    k1, k2 = 3, 5
-    a1, a2 = 0.1, 0.2
+    # Actions
+    PRINT_STATS = False
+    SHOW_EXAMPLES = True
+    export_gabors = True
 
-    # Phase config
-    phase_mode = "independent"  # "independent" | "fixed"
-    phase_fixed_values = (0, 0)  # used iff phase_mode == "fixed"
-
-    # Amplitudes config
-    amp_mode = "ring_shared_arcs"  # "fixed" | "independent_uniform" | "ring_shared_arcs"
-    amp_class_coupling = "parity"  # "none" | "parity"
-
-    # ---- Create dataset ----
-    trainloader, valloader, testloader, ds = load_shape_deform_data(
-        nA=nA, nB=nB,
-        m_arcs_per_class=m_arcs_per_class, gap_frac=gap_frac, phase_deg=phase_deg,
-        image_size=image_size, ring_radius_px=ring_radius_px,
-        k1=k1, k2=k2,
-        a1=a1, a2=a2,
-        mode="indep_phase",
-        alpha_x=0.1, beta_y=0.1,
-        intensity=1.0, bg=0.0, norm="max", global_rot="none",
-        amp_mode=amp_mode, amp_class_coupling=amp_class_coupling,
-        difficulty_sharp=difficulty_sharp,
-        amp_ring_radius=amp_ring_radius,
-        amp_scale_a1=amp_scale_a1, amp_scale_a2=amp_scale_a2,
-        amp_m_arcs_per_class=amp_m_arcs_per_class, amp_gap_frac=amp_gap_frac,
-        phase_mode=phase_mode, phase_fixed_values=phase_fixed_values,
-        batch_size=256, seed=42
+    # Studio preference (all sliders/knobs exposed exactly like older mains)
+    set_studio_from_main(
+        m_phase=3, m_amp=3, gap=0.25, phase_deg=0.0,
+        which_arc_phi=0, pos_phi=0.5, which_arc_amp=0, pos_amp=0.5,
+        R=5.0, profile="absolute", sharp=0.4, amp_min=None, amp_max=None,
+        k_max=8, m_freq=3, gap_freq=0.50,
+        phase_src="None (ring)", amp_src="None (ring)", freq_src="None (ring)",
+        k1=3, a1=0.9, phi1_deg=45.0, phase_mode1="signed_absolute", sphi1=0.25, Kphi1=10.0,
+        amp_mode1="relative", sA1=0.25, KA1=10.0,
+        k2=5, a2=0.6, phi2_deg=0.0, phase_mode2="signed_absolute", sphi2=0.25, Kphi2=10.0,
+        amp_mode2="relative", sA2=0.25, KA2=10.0,
+        tinys=[(8, 0.0, 0.0, 0.5), (14, 0.0, 0.0, 0.8), (2, 0.0, 0.0, 0.3)]
     )
+
+    # Build dataset by asking Studio to generate batches until we have nA/nB
+    ds = ShapeDeformDataset(nA=nA, nB=nB,
+                            image_size=image_size,
+                            intensity=intensity, bg=bg, norm=norm,
+                            seed=seed, batch=8)
+
+
     plot_and_record_video(num_unsup_epochs=20,
                           num_sup_epochs=10,
                           num_batches=7,

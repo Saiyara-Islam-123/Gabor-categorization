@@ -741,17 +741,17 @@ def main():
     # ---- Configurable parameters ----
     nA = 500
     nB = nA
-    m_arcs_per_class = 2
+    m_arcs_per_class = 6
     gap_frac = 0.5
     phase_deg = 0.0
 
     # Amplitude ring params (independent)
-    amp_m_arcs_per_class = 6
+    amp_m_arcs_per_class = 12
     amp_gap_frac = 0.15
 
     # Amplitude ring controls
     amp_ring_radius = 0.8  # smaller = subtler deformation
-    amp_scale_a1 = 0.2
+    amp_scale_a1 = 0.3
     amp_scale_a2 = 0.6
 
     difficulty_sharp = 0.15  # try 0.3–0.8; 0 = no sharpening difference
