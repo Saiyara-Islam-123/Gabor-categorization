@@ -36,6 +36,9 @@ _STUDIO = StudioMod.ShapeStudio(); _STUDIO.setVisible(False)
 import json as _json
 
 import io, contextlib
+
+# JSON config captured from set_studio_from_main
+_CFG = None
 from collections import Counter
 
 
@@ -93,24 +96,61 @@ def _log_sampling_stats(label: str, specs: list, m_phase: int = None, m_amp: int
 
 
 def _sample_specs_for_class_with_studio(studio, cls: int, n: int, seed: int = 12345):
-    import random
-    rng = random.Random(seed + cls)
-    phase_none = (studio.cmb_phase_src.currentIndex() == 1)
-    amp_none   = (studio.cmb_amp_src.currentIndex()   == 1)
-    freq_none  = (studio.cmb_freq_src.currentIndex()  == 1)
+    import numpy as _np
+    assert isinstance(_CFG, dict), "_CFG (JSON) not loaded"
+
+    # Modes (JSON-only)
+    phase_none = str(_CFG.get("phase_src", "")).startswith("None")
+    amp_none   = str(_CFG.get("amp_src",   "")).startswith("None")
+    freq_none  = str(_CFG.get("freq_src",  "")).startswith("None")
+
+    # Ring sizes (JSON-only)
+    m_phase = int(_CFG["m_phase"])
+    m_amp   = int(_CFG["m_amp"])
+    assert m_phase >= 1 and m_amp >= 1, "m_phase/m_amp must be >=1"
+
+    # k-bounds (JSON-only)
+    kmin1 = int(_CFG.get("k_min1", _CFG.get("kmin1", 2)))
+    kmin2 = int(_CFG.get("k_min2", _CFG.get("kmin2", 3)))
+    kmax  = int(_CFG.get("k_max",  _CFG.get("kmax",  8)))
+    assert kmax >= kmin1 and kmax >= kmin2, "k_max must be >= k_min*"
+
+    rng = _np.random.default_rng(seed + 7919 * int(cls))
     specs = []
-    for _ in range(n):
-        spec = {}
+
+    for _ in range(int(n)):
+        spec = {"class_id": int(cls)}
+
+        # φ: None(ring) => independent (i,t) draw, else fixed from JSON
         if phase_none:
-            spec["phi"] = (rng.randrange(max(1,int(studio.m_phase))), rng.random())
+            spec["phi"] = (int(rng.integers(0, m_phase)), float(rng.random()))
+        else:
+            spec["phi"] = (int(_CFG.get("which_arc_phi", 0)),
+                           float(_CFG.get("pos_phi", 0.5)))
+
+        # χ (amp): None(ring) => independent draw, else fixed from JSON
         if amp_none:
-            spec["amp"] = (rng.randrange(max(1,int(studio.m_amp))),   rng.random())
+            spec["amp"] = (int(rng.integers(0, m_amp)), float(rng.random()))
+        else:
+            spec["amp"] = (int(_CFG.get("which_arc_amp", 0)),
+                           float(_CFG.get("pos_amp", 0.5)))
+
+        # freq: None(ring) => inclusive kmax, else fixed from JSON
         if freq_none:
-            kmin1 = int(getattr(studio, "kmin1", 2)); kmin2 = int(getattr(studio, "kmin2", 3))
-            kmax  = max(kmin1, kmin2, int(studio.s_kmax.value()))
-            spec["freq"] = (rng.randint(kmin1, kmax), rng.randint(kmin2, kmax))
+            spec["freq"] = (
+                int(rng.integers(min(kmin1, kmax), max(kmin1, kmax) + 1)),
+                int(rng.integers(min(kmin2, kmax), max(kmin2, kmax) + 1)),
+            )
+        else:
+            spec["freq"] = (int(_CFG.get("k1", kmin1)),
+                            int(_CFG.get("k2", kmin2)))
+
         specs.append(spec)
+
+    if len(specs) != int(n):
+        raise RuntimeError(f"[sampler] produced {len(specs)} < n={n}")
     return specs
+
 
 def _build_ds_for_stats(studio, n_per_class: int, seed: int = 12345):
     """
@@ -147,6 +187,8 @@ def get_latent_and_image_stats_text_for_studio(studio, n_per_class: int = 24, se
 def load_studio_settings_json(p: str) -> dict:
     with open(p, "r", encoding="utf-8") as f:
         cfg = _json.load(f)
+        global _CFG
+        _CFG = cfg
     return cfg
 
 def euclidean_distance_matrix(embeddings1: torch.Tensor,
@@ -251,22 +293,30 @@ class ShapeDeformDataset(Dataset):
 
         A_specs, B_specs = self._collect_specs_from_studio(nA, nB,independent_B=self.independent_B)
 
+        assert len(A_specs) == int(nA) and len(B_specs) == int(nB), \
+            f"[collect] got A={len(A_specs)}/{nA}, B={len(B_specs)}/{nB}"
 
+        # NEW: sanity
+
+        assert len(A_specs) == nA and len(B_specs) == nB, f"[collect] got A={len(A_specs)}/{nA}, B={len(B_specs)}/{nB}"
+        assert all(isinstance(s, dict) for s in A_specs), "[collect] Class 0 has a None spec"
+        assert all(isinstance(s, dict) for s in B_specs), "[collect] Class 1 has a None spec"
 
         idx = 0
         for cls, specs in [(0, A_specs), (1, B_specs)]:
             for spec in specs:
-                # inside the exemplar loop, when you already have `spec`:
+                # store raw spec and label
                 self.specs[idx] = spec
-
-                if not isinstance(spec, dict): spec = {}
                 self.labels[idx] = cls
 
-                # --- ring params from Studio (with safe fallbacks) ---
-                m_phase = int(getattr(_STUDIO, "m_phase", 6))
-                m_amp = int(getattr(_STUDIO, "m_amp", m_phase))
-                gap_phase = float(getattr(_STUDIO, "gap_phase", getattr(_STUDIO, "gap_frac", 0.0)))
-                gap_amp = float(getattr(_STUDIO, "gap_amp", getattr(_STUDIO, "gap_frac", 0.0)))
+                # --- ring params from JSON (Studio is the source of truth) ---
+                m_phase = int(_CFG['m_phase'])
+                m_amp = int(_CFG['m_amp'])
+                gap = float(_CFG.get('gap', 0.0))
+                phase_deg = float(_CFG.get('phase_deg', 0.0))
+                amp_min = float(_CFG.get('amp_min', 0.5))
+                amp_max = float(_CFG.get('amp_max', 3.5))
+                parity = bool(_CFG.get('parity_flip', False))
 
                 # spec["phi"] and spec["amp"] are LOCAL arc indices (0..m-1) + position t∈[0,1]
                 if isinstance(spec, dict) and (spec.get("phi") is not None):
@@ -279,25 +329,24 @@ class ShapeDeformDataset(Dataset):
                 else:
                     i_amp, t_amp = 0, 0.5
 
-                # class-aware mapping (even arcs for class 0, odd arcs for class 1)
-                phi_theta = self._theta_from_local_arc(cls, i_phi, t_phi, m_phase, gap_phase)
-                amp_theta = self._theta_from_local_arc(cls, i_amp, t_amp, m_amp, gap_amp)
+                # Angles from JSON-only params using local (i,t) → θ mapping
+                # φ ring
+                phi_theta = ShapeDeformDataset._theta_from_local_arc(
+                    cls, i_phi, t_phi, m_phase, gap
+                )
+                # χ ring
+                amp_theta = ShapeDeformDataset._theta_from_local_arc(
+                    cls, i_amp, t_amp, m_amp, gap
+                )
+                phi_theta = float(phi_theta); amp_theta = float(amp_theta)
 
-                # Use BOTH phase and amplitude in the latent (so amp_theta is no longer “greyed out”)
+                # Latents: use phase AND amplitude (you had phi duplicated twice before)
                 self.latents[idx] = [
                     math.cos(phi_theta), math.sin(phi_theta),
                     math.cos(amp_theta), math.sin(amp_theta),
                 ]
-                # Render via Studio then rasterize to fixed canvas (fit like Studio view)
-                x, y, _, _ = _STUDIO._render_with_spec(cls, spec)
 
-                # NEW: capture the ks that were actually used by Studio for this spec
-                # BEFORE (wrong: reading after context restores 3/5)
-                # x, y, _, _ = _STUDIO._render_with_spec(cls, spec)
-                # self.k1_used[idx] = int(getattr(_STUDIO.bases[0], "k", 0))
-                # self.k2_used[idx] = int(getattr(_STUDIO.bases[1], "k", 0))
-
-                # AFTER (correct: read while the spec is applied and sampling is active)
+                # Render via Studio, but spec is fully JSON-driven
                 with _SpecApply(_STUDIO, spec):
                     x, y, _, _ = _STUDIO._render_with_spec(cls, spec)
                     k1_now = int(getattr(_STUDIO.bases[0], "k", 0))
@@ -306,24 +355,33 @@ class ShapeDeformDataset(Dataset):
                 self.k1_used[idx] = k1_now
                 self.k2_used[idx] = k2_now
 
+                # Rasterize (unchanged)
                 cx, cy = (self.W - 1) / 2.0, (self.H - 1) / 2.0
-                rmax = float(np.max(np.hypot(x, y)));
+                rmax = float(np.max(np.hypot(x, y)))
                 rmax = 1.0 if (not np.isfinite(rmax) or rmax <= 1e-9) else rmax
                 scale_px = 0.48 * min(self.H, self.W) / rmax
-                img = _rasterize_filled_polygon(self.H, self.W, x, y, cx, cy, scale_px,
-                                                fill_value=self.intensity, bg=self.bg)
+                img = _rasterize_filled_polygon(
+                    self.H, self.W, x, y, cx, cy, scale_px,
+                    fill_value=self.intensity, bg=self.bg
+                )
                 if self.norm == "max":
-                    m = img.max();
+                    m = img.max()
                     if m > 0: img = img / m
                 elif self.norm == "l2":
-                    n = np.linalg.norm(img.reshape(-1));
+                    n = np.linalg.norm(img.reshape(-1))
                     if n > 0: img = img / n
+
                 self.images[idx] = np.clip(img, 0.0, 1.0).astype(np.float32)
                 idx += 1
 
-                # ---------- end raster ----------
+        # <-- the filled-count check MUST be here, AFTER the loops
+        if idx != (nA + nB):
+            raise RuntimeError(
+                f"[dataset] Filled {idx} specs but expected {nA + nB}. "
+                f"A_specs={len(A_specs)}, B_specs={len(B_specs)}"
+            )
 
-        # Quick summary
+        # Quick summary (unchanged)
         try:
             print(f"[v19] Unique k1: {np.unique(self.k1_used)}")
             print(f"[v19] Unique k2: {np.unique(self.k2_used)}")
@@ -343,60 +401,95 @@ class ShapeDeformDataset(Dataset):
         amp_global = 2 * i_amp + p_amp  # in 0..(2*m_amp-1)
         return (phase_global + amp_global) & 1, phase_global, amp_global
 
+
     def _collect_specs_from_studio(self, nA, nB, independent_B=True):
+        """
+        JSON-only sampler: build specs directly from _CFG without consulting Studio.
+        - Class 0 and Class 1 are sampled independently when independent_B=True.
+        - Each spec is a dict: {'phi': (i_phi, t_phi), 'amp': (i_amp, t_amp), 'freq': (k1, k2)}
+          where local indices i_* are in [0 .. m_* - 1] and t_* in [0,1].
+        """
+        import numpy as _np
+        assert isinstance(_CFG, dict), "Missing JSON: load_studio_settings_json() must run before dataset init."
 
-        """Ask Studio for batches until we have enough specs; robust to headless mode."""
-        A: List[dict] = []; B: List[dict] = []
-        a_needed, b_needed = int(nA), int(nB)
+        # JSON ring sizes + freq bounds
+        m_phase = int(_CFG["m_phase"])
+        m_amp = int(_CFG["m_amp"])
+        kmin1 = int(_CFG.get("k_min1", _CFG.get("kmin1", 2)))
+        kmin2 = int(_CFG.get("k_min2", _CFG.get("kmin2", 3)))
+        kmax = int(_CFG.get("k_max", _CFG.get("kmax", 8)))
+        if kmax < max(kmin1, kmin2):
+            kmax = max(kmin1, kmin2)
 
-        def _resample_and_sync():
-            if not hasattr(_STUDIO, "resample_exemplars"):
-                raise RuntimeError("Studio lacks resample_exemplars(). Use the provided Studio file.")
-            # NEW: seed Studio so both classes draw from the same distribution for metrics
-            if hasattr(_STUDIO, "set_seed"):
-                _STUDIO.set_seed(self.metrics_seed)
-            _STUDIO.resample_exemplars()
-            try:
-                if hasattr(_STUDIO, "_update_exemplar_views_impl"):
-                    _STUDIO._update_exemplar_views_impl()
-            except Exception: pass
-            try:
-                for _ in range(2): _QTAPP.processEvents()
-            except Exception: pass
+        # Modes from JSON
+        phase_none = str(_CFG.get("phase_src", "")).lower().startswith("none")
+        amp_none = str(_CFG.get("amp_src", "")).lower().startswith("none")
+        freq_none = str(_CFG.get("freq_src", "")).lower().startswith("none")
 
-        guard = 0
-        while len(A) < a_needed or len(B) < b_needed:
-            _resample_and_sync()
-            ex = getattr(_STUDIO, "_exemplar_specs", None) or []
-            nb = getattr(_STUDIO, "_closest_specs", None) or []
-            A.extend([s for s in ex if isinstance(s, dict)])
-            if independent_B:
-                B.extend([s for s in ex if isinstance(s, dict)])  # <— independent B
-            else:
-                B.extend([s for s in nb if isinstance(s, dict)])  # <— paired B
+        rng0 = _np.random.default_rng(self.metrics_seed + 101)
+        rng1 = _np.random.default_rng(self.metrics_seed + 103)
 
-        A_specs, B_specs = A[:a_needed], B[:b_needed]
+        def _draw_specs(rng, count):
+            out = []
+            for _ in range(int(count)):
+                if phase_none:
+                    i_phi = int(rng.integers(0, m_phase))
+                    t_phi = float(rng.random())
+                else:
+                    i_phi = int(_CFG.get("which_arc_phi", 0))
+                    t_phi = float(_CFG.get("pos_phi", 0.5))
 
+                if amp_none:
+                    i_amp = int(rng.integers(0, m_amp))
+                    t_amp = float(rng.random())
+                else:
+                    i_amp = int(_CFG.get("which_arc_amp", 0))
+                    t_amp = float(_CFG.get("pos_amp", 0.5))
 
+                if freq_none:
+                    k1 = int(rng.integers(min(kmin1, kmax), max(kmin1, kmax) + 1))
+                    k2 = int(rng.integers(min(kmin2, kmax), max(kmin2, kmax) + 1))
+                else:
+                    k1 = int(_CFG.get("k1", kmin1))
+                    k2 = int(_CFG.get("k2", kmin2))
 
+                out.append({"phi": (i_phi, t_phi), "amp": (i_amp, t_amp), "freq": (k1, k2)})
+            return out
 
-        m_phase = getattr(self, "m_phase", getattr(_STUDIO, "m_phase", None))
-        m_amp = getattr(self, "m_amp", getattr(_STUDIO, "m_amp", None))
+        A_specs = _draw_specs(rng0, nA)
 
-        if self.metrics_debug:
-            _log_sampling_stats("Class 0", A_specs, m_phase=m_phase, m_amp=m_amp)
-            _log_sampling_stats("Class 1", B_specs, m_phase=m_phase, m_amp=m_amp)
-
-        # --- SAME-PARAM CLONE TEST (debug) ---
-
-        if getattr(self, "metrics_debug", False) and True:  # leave True just for this test
-            # force B to be a clone of A specs (same phase/amp/t), but class=1
+        if independent_B:
+            B_specs = _draw_specs(rng1, nB)
+        else:
+            # Simple mirrored pairing across the ring as a proxy for “closest”
             B_specs = []
-            for s in A_specs:
-                ss = dict(s)
-                ss["class_id"] = 1  # or whatever key your printer uses
-                B_specs.append(ss)
-            print("[metrics] SAME-PARAM clone test active: B copied from A with class=1")
+            for s in A_specs[:nB]:
+                i_phi, t_phi = s["phi"]
+                i_amp, t_amp = s["amp"]
+                k1, k2 = s["freq"]
+                j_phi = (i_phi + m_phase // 2) % m_phase if m_phase > 1 else 0
+                j_amp = (i_amp + m_amp // 2) % m_amp if m_amp > 1 else 0
+                B_specs.append({"phi": (j_phi, t_phi), "amp": (j_amp, t_amp), "freq": (k1, k2)})
+            if len(B_specs) < nB:
+                B_specs += _draw_specs(rng1, nB - len(B_specs))
+
+        # coverage logs (local arc indices)
+        from collections import Counter as _Counter
+        def _counts(specs, key):
+            idx = [int(s[key][0]) for s in specs if isinstance(s.get(key), (tuple, list))]
+            return dict(_Counter(idx))
+
+        print(f"[metrics] Class 0 — phi local counts:", _counts(A_specs, "phi"))
+        print(f"[metrics] Class 0 — amp local counts:", _counts(A_specs, "amp"))
+        print(f"[metrics] Class 1 — phi local counts:", _counts(B_specs, "phi"))
+        print(f"[metrics] Class 1 — amp local counts:", _counts(B_specs, "amp"))
+
+        # strict guarantees
+        if len(A_specs) != int(nA) or len(B_specs) != int(nB):
+            raise RuntimeError(f"[collect] got A={len(A_specs)}/{nA}, B={len(B_specs)}/{nB}")
+        if any(not isinstance(s, dict) for s in A_specs + B_specs):
+            bad = [i for i, s in enumerate(A_specs + B_specs) if not isinstance(s, dict)]
+            raise RuntimeError(f"[collect] non-dict spec(s) at indices {bad[:5]}")
 
         return A_specs, B_specs
 
@@ -516,10 +609,16 @@ def _phase_angles_from_latents(dataset):
     return phi1, phi2
 
 def plot_phase_ring_with_amp_bands(dataset: "ShapeDeformDataset", band_gap=0.15, alpha=0.8):
+    """
+    Outer ring shows PHASE (φ), inner ring shows AMPLITUDE (χ).
+    Class affects only color; we plot *both* dots per sample.
+    """
     labs = dataset.labels
+
+    # φ from latents
     phi1, _ = _phase_angles_from_latents(dataset)
     phi1 = (phi1 + 2*np.pi) % (2*np.pi)
-    X = np.stack([np.cos(phi1), np.sin(phi1)], axis=1)
+    X_phase = np.stack([np.cos(phi1), np.sin(phi1)], axis=1)  # unit circle positions
 
     # χ from dataset (prefer amp_angles/amp_latents; else use latents[:,2:4])
     if hasattr(dataset, "amp_angles") and np.any(getattr(dataset, "amp_angles", 0) != 0):
@@ -528,41 +627,45 @@ def plot_phase_ring_with_amp_bands(dataset: "ShapeDeformDataset", band_gap=0.15,
         a = getattr(dataset, "amp_latents", None)
         if a is None:
             Z = np.asarray(dataset.latents, dtype=np.float32)
-            a = Z[:, 2:4]                         # <— minimal adaptation
-        chi = (np.arctan2(a[:,1], a[:,0]) + 2*np.pi) % (2*np.pi)
+            a = Z[:, 2:4]
+        chi = (np.arctan2(a[:, 1], a[:, 0]) + 2*np.pi) % (2*np.pi)
 
-    # number of amp arcs per class — if not on dataset, fall back to Studio
-    m_amp = getattr(dataset, "amp_m_arcs_per_class", None)
-    if not m_amp:
-        m_amp = int(getattr(_STUDIO, "m_amp", 2))   # <— minimal adaptation
-    total_arcs = 2 * max(1, int(m_amp))
-    arc_w = 2*np.pi / total_arcs
+    # Inner/outer radii (outer = 1.0 for phase; inner shrunk by band_gap for amp)
+    r_outer = 1.0
+    r_inner = max(0.0, 1.0 - band_gap)
 
-    j = np.floor(chi / arc_w).astype(int) % total_arcs
-    even = (j % 2 == 0)
-
-    r_even = 1.0
-    r_odd  = max(0.0, 1.0 - band_gap)
-    XY = X.copy()
-    XY[ even] *= r_even
-    XY[~even] *= r_odd
+    # Unit circle for χ, scaled to inner ring
+    X_amp = np.stack([np.cos(chi), np.sin(chi)], axis=1)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     t = np.linspace(0, 2*np.pi, 400)
-    ax.plot(np.cos(t), np.sin(t), lw=1.0, color="black", alpha=0.6)
+    # draw both circles: outer (phase), inner (amp)
+    ax.plot(np.cos(t) * r_outer, np.sin(t) * r_outer, lw=1.0, color="black", alpha=0.6)
+    ax.plot(np.cos(t) * r_inner, np.sin(t) * r_inner, lw=1.0, color="black", alpha=0.35)
 
-    # v13 colors & markers (green/lime; dot for even, 'x' for odd)
-    ax.scatter(XY[(labs==0) &  even,0], XY[(labs==0) &  even,1], s=12, alpha=alpha, color="green", label="C0 (even χ-arc)")
-    ax.scatter(XY[(labs==0) & (~even),0], XY[(labs==0) & (~even),1], s=12, alpha=alpha, color="green", marker="x", label="C0 (odd χ-arc)")
-    ax.scatter(XY[(labs==1) &  even,0], XY[(labs==1) &  even,1], s=12, alpha=alpha, color="lime",  label="C1 (even χ-arc)")
-    ax.scatter(XY[(labs==1) & (~even),0], XY[(labs==1) & (~even),1], s=12, alpha=alpha, color="lime",  marker="x", label="C1 (odd χ-arc)")
+    # v13 colors
+    c0 = "green"
+    c1 = "lime"
+
+    # Phase (outer ring) — markers 'o'
+    ax.scatter(X_phase[(labs == 0), 0] * r_outer, X_phase[(labs == 0), 1] * r_outer,
+               s=12, alpha=alpha, color=c0, marker='o', label="C0 φ (outer)")
+    ax.scatter(X_phase[(labs == 1), 0] * r_outer, X_phase[(labs == 1), 1] * r_outer,
+               s=12, alpha=alpha, color=c1, marker='o', label="C1 φ (outer)")
+
+    # Amplitude (inner ring) — markers 'x'
+    ax.scatter(X_amp[(labs == 0), 0] * r_inner, X_amp[(labs == 0), 1] * r_inner,
+               s=12, alpha=alpha, color=c0, marker='x', label="C0 χ (inner)")
+    ax.scatter(X_amp[(labs == 1), 0] * r_inner, X_amp[(labs == 1), 1] * r_inner,
+               s=12, alpha=alpha, color=c1, marker='x', label="C1 χ (inner)")
 
     ax.set_aspect("equal", "box")
-    ax.set_title("Phase Ring with Amplitude Parity Bands (via χ)")
+    ax.set_title("Concentric Rings: Phase φ (outer) and Amplitude χ (inner)")
     ax.set_xlabel("x"); ax.set_ylabel("y")
     ax.grid(True, ls="--", alpha=0.3)
     ax.legend(loc="upper right")
     plt.show()
+
 
 def show_examples_with_nearest(dataset: "ShapeDeformDataset", k: int = 8):
     """
@@ -786,6 +889,24 @@ def set_studio_from_main(
     tinys: List[Tuple[int,float,float,float]] = None,
     parity_flip: bool=False
 ):
+    # Capture JSON as the single source of truth for dataset sampling
+    # _CFG = {
+    #     'm_phase': m_phase, 'm_amp': m_amp, 'gap': gap, 'phase_deg': phase_deg,
+    #     'which_arc_phi': which_arc_phi, 'pos_phi': pos_phi,
+    #     'which_arc_amp': which_arc_amp, 'pos_amp': pos_amp,
+    #     'R': R, 'profile': profile, 'sharp': sharp, 'amp_min': amp_min, 'amp_max': amp_max,
+    #     'k_max': k_max, 'm_freq': m_freq, 'gap_freq': gap_freq,
+    #     'k_min1': k_min1, 'k_min2': k_min2,
+    #     'phase_src': phase_src, 'amp_src': amp_src, 'freq_src': freq_src,
+    #     'k1': k1, 'a1': a1, 'phi1_deg': phi1_deg,
+    #     'phase_mode1': phase_mode1, 'sphi1': sphi1, 'Kphi1': Kphi1,
+    #     'amp_mode1': amp_mode1, 'sA1': sA1, 'KA1': KA1,
+    #     'k2': k2, 'a2': a2, 'phi2_deg': phi2_deg,
+    #     'phase_mode2': phase_mode2, 'sphi2': sphi2, 'Kphi2': Kphi2,
+    #     'amp_mode2': amp_mode2, 'sA2': sA2, 'KA2': KA2,
+    #     'tinys': tinys, 'parity_flip': parity_flip,
+    # }
+
     # Global rings
     _STUDIO.m_phase=int(m_phase); _STUDIO.m_amp=int(m_amp)
     _STUDIO.gap=float(gap); _STUDIO.phase_deg=float(phase_deg)
@@ -794,6 +915,7 @@ def set_studio_from_main(
     _STUDIO.R=float(R); _STUDIO.profile=str(profile); _STUDIO.sharp=float(sharp)
     if amp_min is not None: _STUDIO.amp_min=float(amp_min)
     if amp_max is not None: _STUDIO.amp_max=float(amp_max)
+
 
     try:
         _STUDIO.s_amp_min.set_value(_STUDIO.amp_min)
@@ -900,6 +1022,9 @@ def main():
     settings_path = "./studio_settings.json"  # change to your saved file
     cfg = load_studio_settings_json(settings_path)
 
+
+
+
     # Ensure new freq minima are supported by the signature (add k_min1/k_min2 there if you haven't yet)
     set_studio_from_main(**cfg)  # one-liner, names match exactly
 
@@ -927,6 +1052,7 @@ def main():
                             seed=seed, batch=500,independent_B=True,
                             metrics_seed=12345,
                             metrics_debug=True)
+
 
     # Split + loaders
     total = len(ds)

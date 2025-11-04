@@ -1145,11 +1145,11 @@ def main():
     amplitude_units = "pixels"      # "pixels" | "relative"
 
     # Dataset sizes
-    nA=200
+    nA=100
     nB =nA
 
     # Ring topology
-    m_arcs_per_class = 3
+    m_arcs_per_class = 2
     gap_frac         = 0.30
     phase_deg        = 0.0
     phase_mode       = "independent"      # "independent" | "fixed"
@@ -1157,13 +1157,13 @@ def main():
 
     # Amplitude path for base pair
     amp_mode             = "ring_shared_arcs"  # "fixed" | "independent_uniform" | "ring_shared_arcs"
-    amp_m_arcs_per_class = 3
+    amp_m_arcs_per_class = 2
     amp_gap_frac         = 0.30
 
 
     # Frequency path for base pair (v11; you can change these in place)
     freq_mode              = "ring_shared_arcs"  # "fixed" | "independent_uniform" | "ring_shared_arcs"
-    freq_m_arcs_per_class  = 3
+    freq_m_arcs_per_class  = 2
     freq_gap_frac          = 0.1
 
     # One unified list: (k, a, phi, weight, role)
@@ -1175,7 +1175,7 @@ def main():
         (15,   0, 0.0, 0.1, "tiny"),  # elongation (class-agnostic)
     ]
 
-    difficulty_sharp   = 0.1
+    difficulty_sharp   = 0.0
     tiny_energy_balance = True
     tiny_energy_target  = sum(a*a for (k,a,phi,w,role) in harmonics if str(role).lower() != "base")
 

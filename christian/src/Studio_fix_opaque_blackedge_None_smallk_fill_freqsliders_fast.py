@@ -6,35 +6,64 @@ import sys
 from dataclasses import dataclass
 import numpy as np
 
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtGui
 import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
+
+try:
+    from PySide6 import QtCore, QtWidgets
+except ImportError:
+    from PyQt5 import QtCore, QtWidgets
+
 
 TAU = math.tau if hasattr(math, "tau") else 2*math.pi
 
 def wrap_signed(x: float) -> float:
     return ((x + math.pi) % TAU + TAU) % TAU - math.pi
 
-def ring_phase_for_class(cls: int, m_arcs: int, gap_frac: float, phase_deg: float, which_arc: int, pos_in_arc: float) -> float:
+def ring_phase_for_class(cls: int, m_arcs: int, gap_frac: float, phase_deg: float, which_arc: int, pos_in_arc: float,PARITY_FLIP) -> float:
     total = max(1, 2*int(m_arcs))
     base_sector = TAU / total
     usable = (1.0 - gap_frac) * base_sector
     off = math.radians(phase_deg)
-    global_sector = (int(which_arc) * 2 + (1 if cls == 1 else 0)) % total
+    par = (1 if cls == 1 else 0)
+    if PARITY_FLIP:
+        par ^= 1  # flip 0<->1
+    global_sector = (int(which_arc) * 2 + par) % total  # in ring_phase_for_class
     start = global_sector * base_sector + off + 0.5*gap_frac*base_sector
     pos_in_arc = max(0.0, min(1.0, pos_in_arc))
     phi = start + pos_in_arc * usable
     return (phi % TAU + TAU) % TAU
 
-def amp_from_arc(cls: int, m_arcs: int, gap_frac: float, amp_min: float, amp_max: float, which_arc: int, pos_in_arc: float) -> float:
-    total = max(1, 2*int(m_arcs))
+def amp_from_arc(
+    cls: int, m_arcs: int, gap_frac: float,
+    amp_min: float, amp_max: float,
+    which_arc: int, pos_in_arc: float, PARITY_FLIP
+) -> float:
+    # total bands around the ring
+    total = max(1, 2 * int(m_arcs))
     usable = (1.0 - gap_frac)
     band_width = usable / total
-    global_band = (int(which_arc) * 2 + (1 if cls==1 else 0)) % total
-    lo = amp_min + (global_band * band_width + gap_frac/2.0) * (amp_max - amp_min)
+
+    # ---- key change: decouple amplitude from class parity ----
+    # use the high/low half of pos_in_arc to choose band parity (0 or 1)
+    t = max(0.0, min(1.0, float(pos_in_arc)))
+    if t < 0.5:
+        par = 0
+        t_local = t * 2.0       # map [0,0.5) -> [0,1) inside the chosen band
+    else:
+        par = 1
+        t_local = (t - 0.5) * 2.0
+
+    # global band index: depends on which_arc and the *derived* parity, NOT on cls
+    global_band = (int(which_arc) * 2 + par) % total
+
+    # compute amplitude interval for that band
+    lo = amp_min + (global_band * band_width + gap_frac / 2.0) * (amp_max - amp_min)
     hi = lo + band_width * (amp_max - amp_min)
-    t = max(0.0, min(1.0, pos_in_arc))
-    return max(amp_min, min(amp_max, lo + t * (hi - lo)))
+
+    return max(amp_min, min(amp_max, lo + t_local * (hi - lo)))
+
 
 def apply_phase_offset(phi_ring: float, phi_base: float, mode: str, strength: float, divisor: float) -> float:
     if phi_base is None:
@@ -108,13 +137,16 @@ class ShapeStudio(QtWidgets.QMainWindow):
         self.phase_deg = 0.0
         self.which_arc_phi = 0; self.pos_phi = 0.5
         self.which_arc_amp = 0; self.pos_amp = 0.5
-        self.R = 40.0
+        self.R = 5.0
         self.profile = "absolute"
         self.sharp = 0.3
-        self.amp_min = 0.5; self.amp_max = 1.5
+        self.amp_min = 0.5; self.amp_max = 3.5
         # Frequency sampling state (None mode)
-        self.k_max = 8
-        self.m_freq = 2
+        self.k_max = 6
+        self.m_freq = 6
+        self.kmin1 = 2
+        self.kmin2 = 3
+
         self.gap_freq = 0.30
         self.bases = [
             BaseHarm(k=3, a=0.9, phi=math.radians(45), pmode="signed_absolute", pstr=0.25, pdiv=10.0,
@@ -123,13 +155,18 @@ class ShapeStudio(QtWidgets.QMainWindow):
                      amode="relative", astr=0.25, adiv=10.0),
         ]
         self.tinys = [
-            TinyHarm(k=8, a=0.0, phi=0.0, weight=0.5),
+            TinyHarm(k=6, a=0.0, phi=0.0, weight=0.5),
             TinyHarm(k=14, a=0.0, phi=0.0, weight=0.8),
             TinyHarm(k=2, a=0.0, phi=0.0, weight=0.3),
         ]
 
         self.N = 1600
         self.thetas = np.linspace(0, TAU, self.N, endpoint=False)
+
+        self._stats_timer = QtCore.QTimer(self)
+        self._stats_timer.setSingleShot(True)
+        self._stats_timer.setInterval(250)  # ms
+        self._stats_timer.timeout.connect(self._update_live_stats)
 
         # ----- UI -----
         central = QtWidgets.QWidget(); self.setCentralWidget(central)
@@ -139,6 +176,10 @@ class ShapeStudio(QtWidgets.QMainWindow):
         ctrlScroll = QtWidgets.QScrollArea(); ctrlScroll.setWidgetResizable(True)
         ctrl = QtWidgets.QWidget(); ctrlScroll.setWidget(ctrl)
         controls = QtWidgets.QVBoxLayout(ctrl)
+
+        ctrl.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
+        ctrl.setMinimumWidth(200)  # adjust to taste
+        ctrl.setMaximumWidth(1500)
 
         def add_section(title):
             lab = QtWidgets.QLabel(title); f = lab.font(); f.setBold(True); lab.setFont(f)
@@ -154,10 +195,21 @@ class ShapeStudio(QtWidgets.QMainWindow):
 
         # Frequency sampling controls
         add_section("Frequency sampling")
-        self.s_kmax = ControlRow("k_max (freq None)", 4, 40, 8, is_int=True); self.s_kmax.changed.connect(self.update_from_controls)
-        self.s_m_freq = ControlRow("m_freq (arcs)", 1, 10, 2, is_int=True); self.s_m_freq.changed.connect(self.update_from_controls)
-        self.s_gap_freq = ControlRow("gap_freq", 0.0, 0.8, 0.30, 0.01); self.s_gap_freq.changed.connect(self.update_from_controls)
-        controls.addWidget(self.s_kmax); controls.addWidget(self.s_m_freq); controls.addWidget(self.s_gap_freq)
+        self.s_kmin1 = ControlRow("k_min1", 1, 40, 2, is_int=True);
+        self.s_kmin1.changed.connect(self.update_from_controls)
+        self.s_kmin2 = ControlRow("k_min2", 1, 40, 3, is_int=True);
+        self.s_kmin2.changed.connect(self.update_from_controls)
+        self.s_kmax = ControlRow("k_max (freq None)", 4, 40, 8, is_int=True);
+        self.s_kmax.changed.connect(self.update_from_controls)
+        self.s_m_freq = ControlRow("m_freq (arcs)", 1, 10, 2, is_int=True);
+        self.s_m_freq.changed.connect(self.update_from_controls)
+        self.s_gap_freq = ControlRow("gap_freq", 0.0, 0.8, 0.30, 0.01);
+        self.s_gap_freq.changed.connect(self.update_from_controls)
+        controls.addWidget(self.s_kmin1);
+        controls.addWidget(self.s_kmin2)
+        controls.addWidget(self.s_kmax);
+        controls.addWidget(self.s_m_freq);
+        controls.addWidget(self.s_gap_freq)
 
         # Source selection (Fixed vs None)
         add_section("Source selection (Fixed vs None)")
@@ -190,6 +242,82 @@ class ShapeStudio(QtWidgets.QMainWindow):
         self.s_sharp = ControlRow("difficulty_sharp", 0.0, 1.0, self.sharp, 0.01); self.s_sharp.changed.connect(self.update_from_controls)
         controls.addWidget(self.s_R); cw = QtWidgets.QWidget(); cw.setLayout(row); controls.addWidget(cw); controls.addWidget(self.s_sharp)
         self.chk_hide_top = QtWidgets.QCheckBox("Hide top plots"); controls.addWidget(self.chk_hide_top)
+        # Amplitude bounds (absolute units, same space as R)
+        self.s_amp_min = ControlRow("amp_min", 0.0, 400.0, self.amp_min, 0.5);
+        self.s_amp_min.changed.connect(self.update_from_controls)
+        self.s_amp_max = ControlRow("amp_max", 0.0, 400.0, self.amp_max, 0.5);
+        self.s_amp_max.changed.connect(self.update_from_controls)
+        controls.addWidget(self.s_amp_min)
+        controls.addWidget(self.s_amp_max)
+
+        self.PARITY_FLIP = False  # set True to swap arc parity between classes
+
+        # In __init__, after building the controls UI:
+        self.btn_save = QtWidgets.QPushButton("Save Settings…")
+        self.btn_save.clicked.connect(self.save_settings_to_file)
+        controls.addWidget(self.btn_save)
+
+        #btn_load = QtWidgets.QPushButton("Load settings (JSON)")
+        #btn_load.clicked.connect(self.load_settings_from_file)
+        #controls.addWidget(btn_load)
+
+        # === Live distances (auto, no button) ===
+        # self.lbl_stats_title = QtWidgets.QLabel("Live distances (dataset printers)")
+        # self.lbl_stats_title.setAlignment(QtCore.Qt.AlignCenter)
+        # self.lbl_stats_title.setStyleSheet("QLabel { font-size: 16pt; font-weight: 700; }")
+        # controls.addWidget(self.lbl_stats_title)
+
+        self.lbl_live = QtWidgets.QLabel("— Distances —")
+        self.lbl_live.setAlignment(QtCore.Qt.AlignCenter)
+        self.lbl_live.setStyleSheet("""
+            QLabel {
+                font-size: 10pt; font-weight: 800; padding: 8px 12px;
+                border-radius: 12px; background: #111; color: #EEE;
+            }
+        """)
+
+
+        controls.addWidget(self.lbl_live)
+
+        self.txt_stats = QtWidgets.QTextEdit()
+        self.txt_stats.setReadOnly(True)
+        self.txt_stats.setStyleSheet("""
+            QTextEdit {
+                font-family: Consolas, 'Fira Mono', 'DejaVu Sans Mono', monospace;
+                font-size: 11pt; background: #0f0f0f; color: #e8e8e8;
+                border-radius: 8px; padding: 6px;
+            }
+        """)
+        self.txt_stats.setMinimumHeight(200)
+
+        self.txt_stats.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)
+        # Prefer wrapping anywhere to avoid long unbreakable tokens widening the panel
+        self.txt_stats.setWordWrapMode(QtGui.QTextOption.WrapAnywhere)
+        self.txt_stats.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        # Don’t let it demand extra horizontal space
+        self.txt_stats.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                     QtWidgets.QSizePolicy.Expanding)
+
+        controls.addWidget(self.txt_stats)
+
+        # --- Dataset compute & print -------------------------------------------------
+        self.btn_compute_ds = QtWidgets.QPushButton("Compute Dataset & Print Distances")
+        self.btn_compute_ds.setToolTip(
+            "Build a small dataset with the current Studio settings, then run the dataset's print_* distance functions.")
+        self.btn_compute_ds.clicked.connect(self._compute_dataset_and_print_distances)
+        controls.addWidget(self.btn_compute_ds)
+
+        # --- Dataset size ------------------------------------------------------------
+        rowN = QtWidgets.QWidget()
+        rowN_l = QtWidgets.QHBoxLayout(rowN);
+        rowN_l.setContentsMargins(0, 0, 0, 0)
+        rowN_l.addWidget(QtWidgets.QLabel("N per class"))
+        self.s_n_per_class = QtWidgets.QSpinBox()
+        self.s_n_per_class.setRange(4, 2000)  # adjust upper bound if you like
+        self.s_n_per_class.setSingleStep(4)
+        self.s_n_per_class.setValue(48)  # your previous default
+        rowN_l.addWidget(self.s_n_per_class)
+        controls.addWidget(rowN)
 
         # Base 1
         add_section("Base 1")
@@ -260,8 +388,21 @@ class ShapeStudio(QtWidgets.QMainWindow):
                 curve = pw.plot([], [], pen=pg.mkPen('white', width=3.0))
                 self.ex_rows[row].append(curve); self.ex_pws[row].append(pw); self.ex_grid.addWidget(pw, row, col)
         grid_lay.addLayout(self.ex_grid)
-        h = QtWidgets.QHBoxLayout(); self.btn_resample = QtWidgets.QPushButton("Resample 8 exemplars"); self.btn_resample.clicked.connect(self.resample_exemplars)
-        h.addStretch(1); h.addWidget(self.btn_resample); grid_lay.addLayout(h)
+        h = QtWidgets.QHBoxLayout()
+
+        # NEW: bottom-row toggle
+        self.chk_bottom_nearest = QtWidgets.QCheckBox("Bottom row: show nearest matches")
+        self.chk_bottom_nearest.setChecked(True)
+        self.chk_bottom_nearest.toggled.connect(lambda _: self.update_exemplar_views())
+
+        self.btn_resample = QtWidgets.QPushButton("Resample 8 exemplars")
+        self.btn_resample.clicked.connect(self.resample_exemplars)
+
+        h.addWidget(self.chk_bottom_nearest)
+        h.addStretch(1)
+        h.addWidget(self.btn_resample)
+        grid_lay.addLayout(h)
+
         right_lay.addWidget(grid_box, 1)
 
         btns = QtWidgets.QHBoxLayout(); self.btn_reset = QtWidgets.QPushButton("Reset"); self.btn_reset.clicked.connect(self.reset)
@@ -271,13 +412,184 @@ class ShapeStudio(QtWidgets.QMainWindow):
         root.addWidget(right, 1)
 
         # Initial sampling & render
-        self._exemplar_specs = None; self._closest_specs = None
+        self._exemplar_specs = None
+        self._closest_specs = None
+        self._exemplar_specs_bottom_random = None  # NEW: bottom row when not showing nearest
+
         # Debounce timer for expensive exemplar pairing
         self._debounce = QtCore.QTimer(self); self._debounce.setSingleShot(True)
         self._debounce.setInterval(30)
         self._debounce.timeout.connect(self._update_exemplar_views_impl)
         self.resample_exemplars()
         self.update_plots()
+
+    def _compute_dataset_and_print_distances(self):
+        import io, sys, traceback, re
+        self.btn_compute_ds.setEnabled(False)
+        self.btn_compute_ds.setText("Computing…")
+
+
+        try:
+            # 1) Import dataset module & push current Studio settings
+            from shape_deform_dataset_v19_studio_full_main_STUDIOTRUTH import (
+                set_studio_from_main,
+                ShapeDeformDataset,
+                print_latent_distance_stats,
+                print_image_distance_stats,
+            )
+
+            # Collect current Studio state into kwargs that match set_studio_from_main
+            cfg = self._current_settings_dict()  # this is the saver you already have
+
+            # Ensure k_max respects k_min floors (in case sliders changed)
+            if "k_min1" in cfg and "k_min2" in cfg and "k_max" in cfg:
+                cfg["k_max"] = max(int(cfg["k_max"]), int(cfg["k_min1"]), int(cfg["k_min2"]))
+
+            set_studio_from_main(**cfg)
+
+            n = int(self.s_n_per_class.value())
+
+            # 2) Build a small dataset (fast) that still exercises the stats
+            ds = ShapeDeformDataset(
+                nA=n, nB=n,  # adjust if you want denser stats; 48/48 is quick
+                image_size=128, intensity=1.0, bg=0.0, norm="none",
+                seed=123, batch=256
+            )
+
+            # A) Per-class mean intensity and L2 norms (should be ~equal across classes)
+            import numpy as np
+            X = ds.images.reshape(len(ds.images), -1).astype(np.float32)
+            y = ds.labels.astype(int)
+            l2 = np.linalg.norm(X, axis=1)
+            mu = X.mean(axis=1)
+            print("[diag] L2 mean C0/C1:", l2[y == 0].mean(), l2[y == 1].mean())
+            print("[diag] μ intensity C0/C1:", mu[y == 0].mean(), mu[y == 1].mean())
+
+            # B) Turn off edges to see if the gap collapses (set both flags same)
+
+            # 3) Capture the printers' stdout
+            buf = io.StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = buf
+            try:
+                print_latent_distance_stats(ds)
+                print_image_distance_stats(ds)
+            finally:
+                sys.stdout = old_stdout
+
+            text = buf.getvalue()
+            self.txt_stats.setText(text)
+
+            # 4) Extract headline numbers (latent block and pixel space block) and paint the big label
+
+            # Find all (within, between) pairs in order of appearance
+            pairs = re.findall(
+                r"Overall within:\s*([0-9.]+).*?Between.*?:\s*([0-9.]+)",
+                text, flags=re.S
+            )
+
+            # Choose which block you want:
+            #   index 0 = first (usually LATENT), index 1 = second (usually PIXEL/IMAGE)
+            if len(pairs) >= 2:
+                within_str, between_str = pairs[1]  # <-- PIXEL space
+            elif len(pairs) == 1:
+                within_str, between_str = pairs[0]  # fallback if only one block printed
+            else:
+                raise ValueError("Could not parse 'Overall within'/'Between' lines from output.")
+
+            m_within = float(within_str)
+            m_between = float(between_str)
+
+            if m_within and m_between:
+                within = float(m_within)
+                between = float(m_between)
+                ratio = (between / within) if within > 1e-12 else 0.0
+                bg, fg = "#721c24", "#f8d7da"  # weak
+                self.lbl_live.setStyleSheet(
+                    f"QLabel {{ font-size: 15pt; font-weight: 800; padding: 8px 12px; "
+                    f"border-radius: 12px; background: {bg}; color: {fg}; }}"
+                )
+                self.lbl_live.setText(
+                    f"W  {within:.3f} | B  {between:.3f} "
+                )
+            else:
+                self.lbl_live.setStyleSheet(
+                    "QLabel { font-size: 15pt; font-weight: 800; padding: 8px 12px; "
+                    "border-radius: 12px; background: #856404; color: #fff3cd; }"
+                )
+                self.lbl_live.setText("Printed stats parsed, but no summary lines found")
+
+        except Exception as e:
+            self.txt_stats.setText(traceback.format_exc())
+            self.lbl_live.setStyleSheet(
+                "QLabel { font-size: 15pt; font-weight: 800; padding: 8px 12px; "
+                "border-radius: 12px; background: #721c24; color: #f8d7da; }"
+            )
+            self.lbl_live.setText(f"Dataset compute failed: {e}")
+
+        finally:
+            self.btn_compute_ds.setEnabled(True)
+            self.btn_compute_ds.setText("Compute Dataset & Print Distances")
+
+    def _update_live_stats(self):
+        try:
+            # Use the dataset’s helper that wraps your two print_* functions
+            from shape_deform_dataset_v19_studio_full_main_STUDIOTRUTH import get_latent_and_image_stats_text_for_studio
+            text = get_latent_and_image_stats_text_for_studio(self, n_per_class=24, seed=12345)
+        except Exception as e:
+            self.lbl_live.setStyleSheet(
+                "QLabel { font-size: 15pt; font-weight: 800; padding: 8px 12px; border-radius: 12px; background: #721c24; color: #f8d7da; }")
+            self.lbl_live.setText(f"Stats error: {e}")
+            self.txt_stats.setText(str(e))
+            return
+
+        # Show full raw text in the panel
+        self.txt_stats.setText(text)
+
+        # Pull the 2 summary numbers from each block (Overall within / Between)
+        import re
+        def _grab(pattern):
+            m = re.search(pattern, text)
+            return float(m.group(1)) if m else 0.0
+
+        lat_within = _grab(r"Overall within:\s*([0-9.]+)")
+        lat_between = _grab(r"Between.*:\s*([0-9.]+)")
+        # for the second (pixel) block, take the next pair of numbers if you want both;
+        # or keep the first pair as your headline metric. Here we just show latent as the header:
+        ratio = (lat_between / lat_within) if lat_within > 1e-12 else 0.0
+
+        # color badge by ratio (tweak thresholds)
+        if ratio >= 1.50:
+            bg, fg = "#155724", "#d4edda"
+        elif ratio >= 1.20:
+            bg, fg = "#856404", "#fff3cd"
+        else:
+            bg, fg = "#721c24", "#f8d7da"
+
+        self.lbl_live.setStyleSheet(f"""
+            QLabel {{
+                font-size: 15pt; font-weight: 400; padding: 8px 12px;
+                border-radius: 12px; background: {bg}; color: {fg};
+            }}
+        """)
+        self.lbl_live.setText(
+            f"W  {lat_within:.3f} | B {lat_between:.3f}"
+        )
+
+    def compute_dataset_stats_and_show(self):
+        try:
+            from shape_deform_dataset_v19_studio_full_main_STUDIOTRUTH import get_latent_and_image_stats_text_for_studio
+        except Exception as e:
+            self.txt_stats.setText(f"Import error: {e}\nCheck PYTHONPATH / sys.path to reach the dataset module.")
+            return
+
+        n = int(self.s_n_stats.value())
+        try:
+            text = get_latent_and_image_stats_text_for_studio(self, n_per_class=n, seed=12345)
+        except Exception as e:
+            text = f"Error while computing stats via dataset code:\n{e}"
+
+        self.txt_stats.setText(text)
 
     def update_from_controls(self):
         if getattr(self, "_ui_guard", False): return
@@ -304,6 +616,28 @@ class ShapeStudio(QtWidgets.QMainWindow):
             for i,(r_k,r_a,r_phi,r_w) in enumerate(self.tiny_rows):
                 self.tinys[i].k = r_k.value(); self.tinys[i].a = r_a.value(); self.tinys[i].phi = math.degrees(r_phi.value()); self.tinys[i].phi = math.radians(self.tinys[i].phi); self.tinys[i].weight = r_w.value()
 
+            self.kmin1 = self.s_kmin1.value()
+            self.kmin2 = self.s_kmin2.value()
+            self.k_max = max(self.s_kmax.value(), self.kmin2)  # keep k_max ≥ kmin2
+            self.m_freq = self.s_m_freq.value()
+            self.gap_freq = self.s_gap_freq.value()
+
+            # Keep amp_min ≤ amp_max and both reasonable vs R
+            self.amp_min = self.s_amp_min.value()
+            self.amp_max = self.s_amp_max.value()
+            if self.amp_min > self.amp_max:
+                self.amp_min, self.amp_max = self.amp_max, self.amp_min  # simple swap
+
+            # (optional UX) ensure the sliders reflect the swap
+            self.s_amp_min.set_value(self.amp_min)
+            self.s_amp_max.set_value(self.amp_max)
+
+            # Re-render plots as you already do...
+            # self.update_plots()
+
+            # Debounced metrics refresh (200 ms after last change)
+            self._stats_timer.start(250)
+
             self.update_plots()
         finally:
             self._ui_guard = False
@@ -313,8 +647,8 @@ class ShapeStudio(QtWidgets.QMainWindow):
         self.update_plots()
 
     def collect_harmonics(self, cls: int):
-        phi_ring = ring_phase_for_class(cls, self.m_phase, self.gap, self.phase_deg, self.which_arc_phi, self.pos_phi)
-        a_ring = amp_from_arc(cls, self.m_amp, self.gap, self.amp_min, self.amp_max, self.which_arc_amp, self.pos_amp)
+        phi_ring = ring_phase_for_class(cls, self.m_phase, self.gap, self.phase_deg, self.which_arc_phi, self.pos_phi,self.PARITY_FLIP)
+        a_ring = amp_from_arc(cls, self.m_amp, self.gap, self.amp_min, self.amp_max, self.which_arc_amp, self.pos_amp,self.PARITY_FLIP)
 
         H = []
         for B in self.bases:
@@ -382,6 +716,7 @@ class ShapeStudio(QtWidgets.QMainWindow):
         old_amp_idx, old_amp_pos = self.which_arc_amp, self.pos_amp
         old_k1, old_k2 = self.bases[0].k, self.bases[1].k
         try:
+
             if "phi" in spec and spec["phi"] is not None:
                 idx, t = spec["phi"]; self.which_arc_phi, self.pos_phi = int(idx), float(t)
             if "amp" in spec and spec["amp"] is not None:
@@ -429,26 +764,64 @@ class ShapeStudio(QtWidgets.QMainWindow):
         x0, y0, *_ = self._render_with_spec(0, spec0)
 
         # Coarse candidates for phase/amp
-        coarse_phi = [(i, t) for i in range(min(max(1, int(self.m_phase)), 2))
-                      for t in (0.33, 0.66)] if ("phi" in spec0) else [None]
-        coarse_amp = [(i, t) for i in range(min(max(1, int(self.m_amp)), 2))
-                      for t in (0.33, 0.66)] if ("amp" in spec0) else [None]
+        def _phi_neighbors():
+            # Seed from spec if present; else from current UI controls
+            if "phi" in spec0 and spec0["phi"] is not None:
+                i, t = spec0["phi"]
+            else:
+                i, t = int(self.which_arc_phi), float(self.pos_phi)
+            i = max(0, min(int(self.m_phase) - 1, int(i)))
+            ts = [max(0.0, t - 0.15), t, min(1.0, t + 0.15)]
+            return [{"phi": (i, tt)} for tt in ts]
+
+        def _amp_neighbors():
+            if "amp" in spec0 and spec0["amp"] is not None:
+                i, t = spec0["amp"]
+            else:
+                i, t = int(self.which_arc_amp), float(self.pos_amp)
+            i = max(0, min(int(self.m_amp) - 1, int(i)))
+            ts = [max(0.0, t - 0.15), t, min(1.0, t + 0.15)]
+            return [{"amp": (i, tt)} for tt in ts]
+
+        coarse_phi_specs = _phi_neighbors()
+        coarse_amp_specs = _amp_neighbors()
 
         # Coarse candidates for frequency — derive from spec0 if present, else no freq search
+        # --- before (current) ---
+        # kpair0 = spec0.get("freq", None)
+        # if kpair0 is None:
+        #     coarse_freq = [None]
+        # else:
+        #     k10, k20 = int(kpair0[0]), int(kpair0[1])
+        #     coarse_freq = [(max(1, k10 + dk1), max(1, k20 + dk2))
+        #                    for dk1 in (-1, 0, 1) for dk2 in (-1, 0, 1)]
+
+        # --- after (always search freq) ---
+        # Seed the grid from the spec if present; otherwise from current base ks
         kpair0 = spec0.get("freq", None)
         if kpair0 is None:
-            coarse_freq = [None]
+            k10, k20 = int(self.bases[0].k), int(self.bases[1].k)
         else:
             k10, k20 = int(kpair0[0]), int(kpair0[1])
-            coarse_freq = [(max(1, k10 + dk1), max(1, k20 + dk2))
-                           for dk1 in (-1, 0, 1) for dk2 in (-1, 0, 1)]
 
-        best = None;
-        bestd = 1e9
-        for ph in (coarse_phi if spec0.get("phi") is not None else [None]):
-            for am in (coarse_amp if spec0.get("amp") is not None else [None]):
-                for fr in (coarse_freq if spec0.get("freq") is not None else [None]):
-                    spec1 = {k: v for k, v in {"phi": ph, "amp": am, "freq": fr}.items() if v is not None}
+        # Respect your ring floor/ceiling when freq is “None (ring)”
+        kmin1, kmin2 = self.kmin1, self.kmin2  # keep your existing minima or expose as sliders
+        kmax = max(self.kmin1, self.kmin2, int(self.s_kmax.value()))
+
+        def _clamp_k(k, kmin):
+            return max(kmin, min(kmax, int(k)))
+
+        coarse_freq = [(_clamp_k(k10 + dk1, kmin1), _clamp_k(k20 + dk2, kmin2))
+                       for dk1 in (-1, 0, 1) for dk2 in (-1, 0, 1)]
+
+        best, bestd = None, 1e9
+        for phs in coarse_phi_specs:  # dicts like {"phi": (i,t)}
+            for ams in coarse_amp_specs:  # dicts like {"amp": (i,t)}
+                for fr in coarse_freq:  # tuples like (k1,k2)
+                    spec1 = {}
+                    spec1.update(phs)
+                    spec1.update(ams)
+                    spec1["freq"] = fr
                     x1, y1, *_ = self._render_with_spec(1, spec1)
                     d = self._distance_xy(x0, y0, x1, y1)
                     if d < bestd:
@@ -480,50 +853,142 @@ class ShapeStudio(QtWidgets.QMainWindow):
                 bestd, best = d, spec1
         return best, bestd
 
+    def nearest_index_in_pool(self, cls_src: int, spec0: dict,
+                              cls_tgt: int, pool_specs: list) -> int:
+        """
+        Return argmin_j distance_xy( render(cls_src, spec0), render(cls_tgt, pool_specs[j]) ).
+        Pool index is relative to pool_specs (0..len(pool_specs)-1).
+        """
+        import math
+        # render source boundary once
+        x0, y0, *_ = self._render_with_spec(cls_src, spec0)
+
+        best_j = -1
+        best_d = math.inf
+        for j, spec1 in enumerate(pool_specs):
+            x1, y1, *_ = self._render_with_spec(cls_tgt, spec1)
+            d = self._distance_xy(x0, y0, x1, y1)
+            if d < best_d:
+                best_d = d
+                best_j = j
+        return best_j if best_j >= 0 else 0
+
+    # ---- add once in Studio init section if not present ----
+    def set_seed(self, seed: int):
+        import numpy as _np
+        self._rng = _np.random.default_rng(int(seed))
+
+    # ---- replacement for resample_exemplars ----
     def resample_exemplars(self):
+        """
+        Build a small exemplar pool for the dataset path.
+        IMPORTANT: sample phase/amp over the FULL range of per-class arcs,
+        not from the UI's 'which arc' sliders.
+        """
+        import numpy as np
+        rng = getattr(self, "_rng", None)
+        if rng is None:
+            rng = np.random.default_rng()  # unseeded fallback
+
         specs = []
-        phase_none = (self.cmb_phase_src.currentIndex()==1)
-        amp_none   = (self.cmb_amp_src.currentIndex()==1)
-        freq_none  = (self.cmb_freq_src.currentIndex()==1)
-        mphi = max(1,int(self.m_phase)); mamp=max(1,int(self.m_amp))
-        import random
+        phase_none = (self.cmb_phase_src.currentIndex() == 1)  # "None (ring)"
+        amp_none = (self.cmb_amp_src.currentIndex() == 1)
+        freq_none = (self.cmb_freq_src.currentIndex() == 1)
+
+        mphi = max(1, int(self.m_phase))
+        mamp = max(1, int(self.m_amp))
+
         for _ in range(8):
             spec = {}
+
+            # ---- PHASE (local arc index, t in [0,1)) ----
             if phase_none:
-                spec["phi"] = (random.randrange(mphi), random.random())
+                which_arc_phi = int(rng.integers(0, mphi, endpoint=False))  # 0..mphi-1
+                t_phi = float(rng.random())
+                spec["phi"] = (which_arc_phi, t_phi)
+
+            # ---- AMP (local band index, t in [0,1)) ----
             if amp_none:
-                spec["amp"] = (random.randrange(mamp), random.random())
+                which_arc_amp = int(rng.integers(0, mamp, endpoint=False))  # 0..mamp-1
+                t_amp = float(rng.random())
+                spec["amp"] = (which_arc_amp, t_amp)
+
+            # ---- FREQ (draw within arc sectors; keep your logic, but use rng) ----
             if freq_none:
-                # Sample integers within [kmin, k_max] using 2*m arcs with gap removal
-                kmin1, kmin2 = 2, 3
-                kmax = max(kmin2, int(self.s_kmax.value()))
+                kmin1, kmin2 = self.kmin1, self.kmin2
+                kmax = max(self.kmin1, self.kmin2, int(self.s_kmax.value()))
                 m = max(1, int(self.s_m_freq.value()))
                 total = 2 * m
                 # choose an arc index for this exemplar (shared by k1/k2 for coherence)
-                arc_idx = random.randrange(m)
+                arc_idx = int(rng.integers(0, m, endpoint=False))  # 0..m-1
                 sector_width = (kmax - kmin1 + 1) / float(total)
-                usable = (1.0 - float(self.s_gap_freq.value())) * sector_width
-                # Class 0 uses even sectors
+                sector_width2 = (kmax - kmin2 + 1) / float(total)
+                usable = (1.0 - float(self.s_gap_freq.value()))
+                # even sector for class-0 parity; class-1 handled later by parity add
                 sec0 = 2 * arc_idx
                 base0 = kmin1 + sec0 * sector_width + 0.5 * float(self.s_gap_freq.value()) * sector_width
-                lo = int(max(kmin1, math.ceil(base0)))
-                hi = int(min(kmax, math.floor(base0 + usable)))
-                if lo > hi:
-                    lo, hi = kmin1, kmax
-                k1 = random.randint(lo, hi)
-                # k2 uses same arc but starts at kmin2
-                sector_width2 = (kmax - kmin2 + 1) / float(total)
                 base02 = kmin2 + sec0 * sector_width2 + 0.5 * float(self.s_gap_freq.value()) * sector_width2
-                lo2 = int(max(kmin2, math.ceil(base02)))
-                hi2 = int(min(kmax, math.floor(base02 + usable)))
-                if lo2 > hi2:
-                    lo2, hi2 = kmin2, kmax
-                k2 = random.randint(lo2, hi2)
+
+                lo = int(max(kmin1, np.ceil(base0)))
+                hi = int(min(kmax, np.floor(base0 + usable * sector_width)))
+                if lo > hi: lo, hi = kmin1, kmax
+                k1 = int(rng.integers(lo, hi + 1))  # inclusive hi
+
+                lo2 = int(max(kmin2, np.ceil(base02)))
+                hi2 = int(min(kmax, np.floor(base02 + usable * sector_width2)))
+                if lo2 > hi2: lo2, hi2 = kmin2, kmax
+                k2 = int(rng.integers(lo2, hi2 + 1))
+
                 spec["freq"] = (k1, k2)
+
+            # (optional) keep local indices for debugging
+            # they are already in spec["phi"] and spec["amp"] as (local_idx, t)
             specs.append(spec)
-        self._exemplar_specs = specs
-        self._closest_specs  = [None]*8
-        self.update_exemplar_views()
+
+            self._exemplar_specs = specs
+
+            # NEW: build an independent bottom-row draw using the same sampling mode as top
+            rng2 = getattr(self, "_rng", None) or __import__("numpy").random.default_rng()
+            self._exemplar_specs_bottom_random = [self._resample_like_top(s, rng2) for s in specs]
+
+            self._closest_specs = [None] * 8
+            self.update_exemplar_views()
+
+    def _resample_like_top(self, spec0: dict, rng):
+        """
+        Make a new spec that follows the same 'None (ring)' vs 'Fixed' logic as the top row,
+        but as an independent draw. We reuse spec0's chosen arc indices, and just re-draw the
+        local t-values (and freq if 'None (ring)').
+        """
+        import copy, math, numpy as np
+        s = copy.deepcopy(spec0)
+
+        # Re-draw local t in [0,1) for phase/amp if present
+        if isinstance(s.get("phi"), (tuple, list)) and len(s["phi"]) == 2:
+            i_phi, _t = s["phi"]
+            s["phi"] = (i_phi, float(rng.random()))
+        if isinstance(s.get("amp"), (tuple, list)) and len(s["amp"]) == 2:
+            i_amp, _t = s["amp"]
+            s["amp"] = (i_amp, float(rng.random()))
+
+        # If frequency was sampled from ring (“None”), draw a new (k1,k2) in same admissible range.
+        # If it was Fixed, keep it identical.
+        # We infer “None” vs “Fixed” from current combo boxes.
+        freq_none = (self.cmb_freq_src.currentIndex() == 1)  # "None (ring)"
+        if freq_none and isinstance(s.get("freq"), (tuple, list)) and len(s["freq"]) == 2:
+            k1_min = int(getattr(self, "kmin1", 1))
+            k2_min = int(getattr(self, "kmin2", 1))
+            # Upper bound comes from the same slider you use elsewhere
+            kmax_slider = int(self.s_kmax.value()) if hasattr(self, "s_kmax") else max(k1_min, k2_min, 8)
+            k1_max = int(max(k1_min, kmax_slider))
+            k2_max = int(max(k2_min, kmax_slider))
+
+            s["freq"] = (
+                int(rng.integers(k1_min, k1_max + 1)),
+                int(rng.integers(k2_min, k2_max + 1)),
+            )
+
+        return s
 
 
     def update_exemplar_views(self):
@@ -541,7 +1006,24 @@ class ShapeStudio(QtWidgets.QMainWindow):
             self._closest_specs[col] = best
             x1, y1, *_ = self._render_with_spec(1, best or {})
             self.ex_rows[1][col].setData(x1,y1)
-            # Update fill for bottom exemplar
+            # BOTTOM ROW: either nearest matches (checkbox ON) or independent exemplars sampled like top (checkbox OFF)
+            if getattr(self, "chk_bottom_nearest", None) is not None and self.chk_bottom_nearest.isChecked():
+                # Show nearest matches (existing behavior)
+                best, _ = self._nearest_for_class1(spec0)
+                self._closest_specs[col] = best
+                target_spec = best if best else spec0  # fall back to a valid spec
+            else:
+                # Show independent exemplars sampled like the top
+                if not self._exemplar_specs_bottom_random or len(self._exemplar_specs_bottom_random) < len(
+                        self._exemplar_specs):
+                    # Safety: if toggle was flipped before a resample, build the list now
+                    rng2 = getattr(self, "_rng", None) or __import__("numpy").random.default_rng()
+                    self._exemplar_specs_bottom_random = [self._resample_like_top(s, rng2) for s in
+                                                          self._exemplar_specs]
+                target_spec = self._exemplar_specs_bottom_random[col]
+
+            x1, y1, *_ = self._render_with_spec(1, target_spec)
+            self.ex_rows[1][col].setData(x1, y1)
             self.ex_fills[1][col] = self._update_fill_item(self.ex_fills[1][col], self.ex_pws[1][col], x1, y1)
 
     def update_plots(self):
@@ -582,6 +1064,84 @@ class ShapeStudio(QtWidgets.QMainWindow):
             "phase_rad_offset": getattr(self, "phase_rad_offset", 0.0),  # global rotation on phase ring
             "amp_rad_offset": getattr(self, "amp_rad_offset", 0.0),
         }
+
+    def _current_settings_dict(self) -> dict:
+        import math
+        # Map Studio state → JSON fields that match set_studio_from_main signature
+        data = {
+            # --- ring topology & global params ---
+            "m_phase": int(self.m_phase),
+            "m_amp": int(self.m_amp),
+            "gap": float(self.gap),
+            "phase_deg": float(self.phase_deg),
+            "which_arc_phi": int(self.which_arc_phi),
+            "pos_phi": float(self.pos_phi),
+            "which_arc_amp": int(self.which_arc_amp),
+            "pos_amp": float(self.pos_amp),
+            "R": float(self.R),
+            "profile": str(self.profile),
+            "sharp": float(self.sharp),
+            "amp_min": float(self.amp_min),
+            "amp_max": float(self.amp_max),
+
+            # --- frequency ring controls ---
+            "k_min1": int(getattr(self, "kmin1", 2)),
+            "k_min2": int(getattr(self, "kmin2", 3)),
+            "k_max": int(self.k_max),
+            "m_freq": int(self.m_freq),
+            "gap_freq": float(self.gap_freq),
+
+            # --- sources (dropdown texts) ---
+            "phase_src": self.cmb_phase_src.currentText(),
+            "amp_src": self.cmb_amp_src.currentText(),
+            "freq_src": self.cmb_freq_src.currentText(),
+
+            # --- base harmonics (convert phases to degrees for readability) ---
+            "k1": int(self.bases[0].k),
+            "a1": float(self.bases[0].a),
+            "phi1_deg": float(math.degrees(self.bases[0].phi)),
+            "phase_mode1": str(self.bases[0].pmode),
+            "sphi1": float(self.bases[0].pstr),
+            "Kphi1": float(self.bases[0].pdiv),
+            "amp_mode1": str(self.bases[0].amode),
+            "sA1": float(self.bases[0].astr),
+            "KA1": float(self.bases[0].adiv),
+
+            "k2": int(self.bases[1].k),
+            "a2": float(self.bases[1].a),
+            "phi2_deg": float(math.degrees(self.bases[1].phi)),
+            "phase_mode2": str(self.bases[1].pmode),
+            "sphi2": float(self.bases[1].pstr),
+            "Kphi2": float(self.bases[1].pdiv),
+            "amp_mode2": str(self.bases[1].amode),
+            "sA2": float(self.bases[1].astr),
+            "KA2": float(self.bases[1].adiv),
+
+            # --- tiny harmonics: list of (k,a,phi_deg,weight) ---
+            "tinys": [
+                [int(T.k), float(T.a), float(math.degrees(T.phi)), float(T.weight)]
+                for T in self.tinys
+            ],
+        }
+        return data
+
+    def save_settings_to_file(self):
+        import json, pathlib
+        # make sure there's an app (harmless if one exists)
+        app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+        default_path = str(pathlib.Path.home() / "studio_settings.json")
+        options = QtWidgets.QFileDialog.Options()
+        # options |= QtWidgets.QFileDialog.DontUseNativeDialog  # uncomment if native dialog causes issues
+
+        parent = self if isinstance(self, QtWidgets.QWidget) else None
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            parent, "Save Studio Settings", default_path, "JSON (*.json)", options=options
+        )
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self._current_settings_dict(), f, indent=2)
 
     @staticmethod
     def _arc_bounds(total_class_arcs: int, gap_frac: float, rad_offset: float = 0.0):
