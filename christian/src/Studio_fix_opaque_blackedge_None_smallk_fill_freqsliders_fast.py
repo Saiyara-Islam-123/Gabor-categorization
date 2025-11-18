@@ -16,6 +16,7 @@ except ImportError:
     from PyQt5 import QtCore, QtWidgets
 
 
+
 TAU = math.tau if hasattr(math, "tau") else 2*math.pi
 
 def wrap_signed(x: float) -> float:
@@ -431,21 +432,11 @@ class ShapeStudio(QtWidgets.QMainWindow):
 
         try:
             # 1) Import dataset module & push current Studio settings
-            from shape_deform_dataset_v19_studio_full_main_STUDIOTRUTH import (
-                set_studio_from_main,
+            from shape_deform_dataset_v35_fixed_json_only_sampler import (
                 ShapeDeformDataset,
                 print_latent_distance_stats,
                 print_image_distance_stats,
             )
-
-            # Collect current Studio state into kwargs that match set_studio_from_main
-            cfg = self._current_settings_dict()  # this is the saver you already have
-
-            # Ensure k_max respects k_min floors (in case sliders changed)
-            if "k_min1" in cfg and "k_min2" in cfg and "k_max" in cfg:
-                cfg["k_max"] = max(int(cfg["k_max"]), int(cfg["k_min1"]), int(cfg["k_min2"]))
-
-            set_studio_from_main(**cfg)
 
             n = int(self.s_n_per_class.value())
 
@@ -534,7 +525,7 @@ class ShapeStudio(QtWidgets.QMainWindow):
     def _update_live_stats(self):
         try:
             # Use the dataset’s helper that wraps your two print_* functions
-            from shape_deform_dataset_v19_studio_full_main_STUDIOTRUTH import get_latent_and_image_stats_text_for_studio
+            from shape_deform_dataset_v35_fixed_json_only_sampler import get_latent_and_image_stats_text_for_studio
             text = get_latent_and_image_stats_text_for_studio(self, n_per_class=24, seed=12345)
         except Exception as e:
             self.lbl_live.setStyleSheet(
@@ -578,7 +569,7 @@ class ShapeStudio(QtWidgets.QMainWindow):
 
     def compute_dataset_stats_and_show(self):
         try:
-            from shape_deform_dataset_v19_studio_full_main_STUDIOTRUTH import get_latent_and_image_stats_text_for_studio
+            from shape_deform_dataset_v35_fixed_json_only_sampler import get_latent_and_image_stats_text_for_studio
         except Exception as e:
             self.txt_stats.setText(f"Import error: {e}\nCheck PYTHONPATH / sys.path to reach the dataset module.")
             return

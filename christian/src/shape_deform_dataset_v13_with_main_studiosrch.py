@@ -1140,7 +1140,7 @@ def main():
 
     # Geometry & units
     image_size      = 128
-    ring_radius_px  = 40
+    ring_radius_px  = 5
     radius_profile  = "absolute"    # "absolute" | "normalized"
     amplitude_units = "pixels"      # "pixels" | "relative"
 
@@ -1149,7 +1149,7 @@ def main():
     nB =nA
 
     # Ring topology
-    m_arcs_per_class = 2
+    m_arcs_per_class = 5
     gap_frac         = 0.30
     phase_deg        = 0.0
     phase_mode       = "independent"      # "independent" | "fixed"
@@ -1157,13 +1157,13 @@ def main():
 
     # Amplitude path for base pair
     amp_mode             = "ring_shared_arcs"  # "fixed" | "independent_uniform" | "ring_shared_arcs"
-    amp_m_arcs_per_class = 2
+    amp_m_arcs_per_class = 5
     amp_gap_frac         = 0.30
 
 
     # Frequency path for base pair (v11; you can change these in place)
     freq_mode              = "ring_shared_arcs"  # "fixed" | "independent_uniform" | "ring_shared_arcs"
-    freq_m_arcs_per_class  = 2
+    freq_m_arcs_per_class  = 5
     freq_gap_frac          = 0.1
 
     # One unified list: (k, a, phi, weight, role)
